@@ -6,7 +6,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendOtpEmail(email: string, otp: string, subject: string = "Your Verification Code") {
   try {
     await resend.emails.send({
-      from: "Security <onboarding@resend.dev>", // Update this when you have a domain
+      from: `Security <${process.env.RESEND_EMAIL_DOMAIN}>`, // Update this when you have a domain
       to: email,
       subject: subject,
       html: `

@@ -24,7 +24,7 @@ export async function sendStaffEmail(
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "CMS Team <onboarding@resend.dev>",
+      from: `CMS Team <${process.env.RESEND_EMAIL_DOMAIN}>`,
       to,
       subject,
       html: `<div>${body}</div>`,

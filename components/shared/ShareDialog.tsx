@@ -166,7 +166,15 @@ function ShareOptions({ url, title, text, image }: ShareDialogProps) {
       "bg-muted text-muted-foreground hover:bg-accent dark:hover:bg-accent hover:text-accent-foreground",
   }));
 
-  const shareLinks = [...defaultLinks, ...customLinks];
+  // Prevent duplicate keys by filtering out default links that exist in custom links
+  const customLinkNames = new Set(
+    customLinks.map((link) => link.name.toLowerCase()),
+  );
+  const filteredDefaultLinks = defaultLinks.filter(
+    (link) => !customLinkNames.has(link.name.toLowerCase()),
+  );
+
+  const shareLinks = [...filteredDefaultLinks, ...customLinks];
 
   return (
     /* Fixed: Added overflow-hidden and min-w-0 to constrain flex children */

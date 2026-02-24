@@ -33,7 +33,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PERMISSIONS } from "@/lib/config/permissions";
@@ -47,9 +47,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "./ModeToggle";
 
-export function AppSidebar({ user }: { user: any }) {
+export function AppSidebar({ user: serverUser }: { user: any }) {
   const pathname = usePathname();
   const { setOpenMobile, isMobile } = useSidebar();
+
+  // Hook into local session to reflect instant client updates from ProfileForm
+  const { data: session } = useSession();
+  const user = session?.user || serverUser;
+
   const perms = (user?.permissions as number) || 0;
 
   const isAdmin = (perms & PERMISSIONS.ADMINISTRATOR) !== 0;
@@ -258,7 +263,9 @@ export function AppSidebar({ user }: { user: any }) {
                       src={user?.image || ""}
                       alt={user?.name || ""}
                     />
-                    <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                    <AvatarFallback className="rounded-lg">
+                      {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{user?.name}</span>

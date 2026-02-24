@@ -25,7 +25,7 @@ export default async function TeamsPage() {
   const teams = response.success ? response.data : [];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Teams Management</h1>
         <p className="text-muted-foreground">

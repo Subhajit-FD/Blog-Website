@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Eye } from "lucide-react";
 import TextHighlight from "@/components/animations/TextHighlight";
 import CommentSection from "@/components/blog/CommentSection";
+import { formatDate } from "@/lib/utils/date";
 
 export async function generateMetadata({
   params,
@@ -146,13 +147,7 @@ export default async function BlogPostPage({
 
           {/* Date */}
           <div className="flex items-center gap-2 text-nowrap">
-            <time dateTime={post.createdAt}>
-              {new Date(post.createdAt).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </time>
+            <time dateTime={post.createdAt}>{formatDate(post.createdAt)}</time>
           </div>
 
           <span className="hidden sm:inline text-slate-300">|</span>
@@ -197,7 +192,8 @@ export default async function BlogPostPage({
           <Image
             src={post.coverImage}
             alt={post.coverImageAlt || post.title}
-            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
             priority
           />

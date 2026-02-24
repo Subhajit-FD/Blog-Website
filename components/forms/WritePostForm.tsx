@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
+import { DateTimePicker } from "@/components/dashboard/DateTimePicker";
 import {
   Popover,
   PopoverContent,
@@ -71,6 +72,7 @@ export default function WritePostForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] =
     useState(!!initialData);
@@ -207,11 +209,15 @@ export default function WritePostForm({
                     name="publishedAt"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <Popover>
+                        <Popover
+                          open={isPickerOpen}
+                          onOpenChange={setIsPickerOpen}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant={"outline"}
+                                onClick={() => setIsPickerOpen(true)}
                                 className={cn(
                                   "w-[240px] pl-3 text-left font-normal",
                                   !field.value && "text-muted-foreground",
@@ -226,53 +232,15 @@ export default function WritePostForm({
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={(date) => {
-                                if (date) {
-                                  // Preserve time if modifying date
-                                  const currentValue =
-                                    field.value || new Date();
-                                  date.setHours(currentValue.getHours());
-                                  date.setMinutes(currentValue.getMinutes());
-                                  field.onChange(date);
-                                }
-                              }}
-                              disabled={(date) =>
-                                date < new Date(new Date().setHours(0, 0, 0, 0))
-                              }
-                              initialFocus
+                          <PopoverContent
+                            className="w-auto p-0 border-none bg-transparent shadow-none"
+                            align="start"
+                          >
+                            <DateTimePicker
+                              value={field.value}
+                              onChange={field.onChange}
+                              onClose={() => setIsPickerOpen(false)}
                             />
-                            <div className="p-3 border-t">
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  type="time"
-                                  className="h-8"
-                                  value={
-                                    field.value
-                                      ? format(field.value, "HH:mm")
-                                      : ""
-                                  }
-                                  onChange={(e) => {
-                                    if (!e.target.value) return;
-                                    const [hours, minutes] = e.target.value
-                                      .split(":")
-                                      .map(Number);
-                                    const newDate = field.value || new Date(); // Use existing or new date
-                                    // If it's a new date (field.value was null), Calendar might not have been picked yet.
-                                    // Logic: Users pick date first usually.
-                                    // We should handle if value is null, default to today.
-                                    const dateToSet = new Date(newDate);
-                                    dateToSet.setHours(hours);
-                                    dateToSet.setMinutes(minutes);
-                                    field.onChange(dateToSet);
-                                  }}
-                                />
-                              </div>
-                            </div>
                           </PopoverContent>
                         </Popover>
                         <FormMessage />

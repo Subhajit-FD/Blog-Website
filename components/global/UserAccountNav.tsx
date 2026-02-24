@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -10,7 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, LayoutDashboard, Bookmark } from "lucide-react";
+import {
+  User,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+  Bookmark,
+} from "lucide-react";
 
 interface UserAccountNavProps {
   user: {
@@ -21,47 +27,68 @@ interface UserAccountNavProps {
   };
 }
 
-export default function UserAccountNav({ user }: UserAccountNavProps) {
+export default function UserAccountNav({
+  user: serverUser,
+}: UserAccountNavProps) {
+  const { data: session } = useSession();
+  const user = session?.user || serverUser;
+
   // Check if they have at least STAFF bits to show the Dashboard link
-  const isStaff = user.permissions && (user.permissions & 2) !== 0 || (user.permissions && (user.permissions & 4096) !== 0);
+  // Use Number() to safely do bitwise math even if the object typings are loose
+  const perms = Number(user?.permissions || 0);
+  const isStaff = (perms & 2) !== 0 || (perms & 4096) !== 0;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="outline-none">
         <Avatar className="w-9 h-9 border-2 border-transparent hover:border-primary transition-all">
-          <AvatarImage src={user.image || ""} alt={user.name || "User"} className="object-cover" />
+          <AvatarImage
+            src={user.image || ""}
+            alt={user.name || "User"}
+            className="object-cover"
+          />
           <AvatarFallback className="bg-primary/10 text-primary font-bold">
             {user.name?.charAt(0).toUpperCase() || "U"}
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      
+
       <DropdownMenuContent align="end" className="w-56">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
             {user.name && <p className="font-medium">{user.name}</p>}
-            {user.email && <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>}
+            {user.email && (
+              <p className="w-[200px] truncate text-sm text-muted-foreground">
+                {user.email}
+              </p>
+            )}
           </div>
         </div>
         <DropdownMenuSeparator />
-        
+
         {isStaff && (
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link href="/dashboard"><LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard</Link>
+            <Link href="/dashboard">
+              <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
+            </Link>
           </DropdownMenuItem>
         )}
-        
+
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/bookmarks"><Bookmark className="w-4 h-4 mr-2" /> My Bookmarks</Link>
+          <Link href="/bookmarks">
+            <Bookmark className="w-4 h-4 mr-2" /> My Bookmarks
+          </Link>
         </DropdownMenuItem>
-        
+
         <DropdownMenuItem asChild className="cursor-pointer">
-          <Link href="/dashboard/profile"><Settings className="w-4 h-4 mr-2" /> Account Settings</Link>
+          <Link href="/dashboard/profile">
+            <Settings className="w-4 h-4 mr-2" /> Account Settings
+          </Link>
         </DropdownMenuItem>
-        
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          className="cursor-pointer text-red-600 focus:text-red-600" 
+        <DropdownMenuItem
+          className="cursor-pointer text-red-600 focus:text-red-600"
           onClick={() => {
             signOut({ callbackUrl: "/login" });
           }}

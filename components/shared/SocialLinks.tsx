@@ -56,19 +56,21 @@ export default function SocialLinks({
 
   return (
     <div className={cn("flex gap-4", className)}>
-      {links.map((link, i) => (
-        <Link
-          key={i}
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-primary transition-colors"
-          title={link.title}
-        >
-          {renderIcon(link.icon)}
-          <span className="sr-only">{link.title}</span>
-        </Link>
-      ))}
+      {links
+        .filter((link) => link.url && link.url.trim() !== "")
+        .map((link, i) => (
+          <Link
+            key={i}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-primary transition-colors"
+            title={link.title}
+          >
+            {renderIcon(link.icon)}
+            <span className="sr-only">{link.title}</span>
+          </Link>
+        ))}
     </div>
   );
 }

@@ -94,13 +94,17 @@ export function ShareDialog({ title, text, url, image }: ShareDialogProps) {
 function ShareOptions({ url, title, text, image }: ShareDialogProps) {
   const [copied, setCopied] = React.useState(false);
   const [dbOptions, setDbOptions] = React.useState<any[]>([]);
-  const [resolvedUrl, setResolvedUrl] = React.useState(url);
+  const [resolvedUrl, setResolvedUrl] = React.useState("");
 
   React.useEffect(() => {
-    if (typeof window !== "undefined" && url.includes("undefined")) {
-      setResolvedUrl(url.replace("undefined", window.location.origin));
-    } else {
-      setResolvedUrl(url);
+    if (typeof window !== "undefined") {
+      if (url && url.includes("undefined")) {
+        setResolvedUrl(url.replace("undefined", window.location.origin));
+      } else if (url) {
+        setResolvedUrl(url);
+      } else {
+        setResolvedUrl(window.location.href);
+      }
     }
   }, [url]);
 
@@ -151,20 +155,22 @@ function ShareOptions({ url, title, text, image }: ShareDialogProps) {
     },
   ];
 
-  const customLinks = dbOptions.map((opt) => ({
-    name: opt.platform,
-    icon: opt.icon ? (
-      <div
-        dangerouslySetInnerHTML={{ __html: opt.icon }}
-        className="h-4 w-4 [&>svg]:h-4 [&>svg]:w-4 fill-current currentColor"
-      />
-    ) : (
-      <Share2 className="h-4 w-4" />
-    ),
-    href: `${opt.baseUrl}${encodeURIComponent(resolvedUrl)}`,
-    bgClass:
-      "bg-muted text-muted-foreground hover:bg-accent dark:hover:bg-accent hover:text-accent-foreground",
-  }));
+  const customLinks = dbOptions
+    .filter((opt) => opt.platform && opt.baseUrl)
+    .map((opt) => ({
+      name: opt.platform,
+      icon: opt.icon ? (
+        <div
+          dangerouslySetInnerHTML={{ __html: opt.icon }}
+          className="h-4 w-4 [&>svg]:h-4 [&>svg]:w-4 fill-current currentColor"
+        />
+      ) : (
+        <Share2 className="h-4 w-4" />
+      ),
+      href: `${opt.baseUrl}${encodeURIComponent(resolvedUrl)}`,
+      bgClass:
+        "bg-muted text-muted-foreground hover:bg-accent dark:hover:bg-accent hover:text-accent-foreground",
+    }));
 
   // Prevent duplicate keys by filtering out default links that exist in custom links
   const customLinkNames = new Set(
@@ -183,7 +189,13 @@ function ShareOptions({ url, title, text, image }: ShareDialogProps) {
       {image && (
         <div className="flex items-start gap-4 p-3 rounded-lg border bg-muted/30 overflow-hidden w-full">
           <div className="relative w-16 h-16 rounded-md overflow-hidden shrink-0">
-            <Image src={image} alt={title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+            <Image
+              src={image}
+              alt={title}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover"
+            />
           </div>
           <div className="flex-1 flex flex-col min-w-0">
             <span className="font-semibold text-sm truncate">{title}</span>
@@ -199,20 +211,22 @@ function ShareOptions({ url, title, text, image }: ShareDialogProps) {
       {/* Middle Section: Horizontally Scrollable Share Buttons */}
       {/* Ensure the parent's overflow-hidden allows this overflow-x-auto to trigger properly */}
       <div className="flex flex-nowrap gap-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full">
-        {shareLinks.map((link) => (
-          <a
-            key={link.name}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`flex flex-col items-center justify-center gap-2 rounded-xl p-3 shrink-0 w-24 transition-colors ${link.bgClass}`}
-          >
-            {link.icon}
-            <span className="text-xs font-medium truncate w-full text-center">
-              {link.name}
-            </span>
-          </a>
-        ))}
+        {shareLinks
+          .filter((link) => link.href && link.href.trim() !== "")
+          .map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex flex-col items-center justify-center gap-2 rounded-xl p-3 shrink-0 w-24 transition-colors ${link.bgClass}`}
+            >
+              {link.icon}
+              <span className="text-xs font-medium truncate w-full text-center">
+                {link.name}
+              </span>
+            </a>
+          ))}
       </div>
 
       {/* Bottom Section: Copy Link */}

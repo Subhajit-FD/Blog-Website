@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createComment, getPostComments } from "@/actions/comment.actions";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/utils/date";
 
 interface CommentSectionProps {
   postId: string;
@@ -146,14 +147,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
                       {comment.author?.name || "Unknown User"}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(comment.createdAt).toLocaleDateString(
-                        undefined,
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        },
-                      )}
+                      {formatDate(comment.createdAt)}
                     </span>
                   </div>
                 </div>

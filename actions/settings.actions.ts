@@ -5,23 +5,41 @@ import Settings from "@/lib/models/Settings";
 import { settingsSchema, SettingsInput } from "@/lib/validations/settings";
 import { auth } from "@/auth";
 import { PERMISSIONS } from "@/lib/config/permissions";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
+
+import { cache } from "react";
+
+// Per-request deduplication (React cache) — prevents duplicate calls in a single render
+const fetchSettingsInternal = cache(async () => {
+  return await cachedGetSettings();
+});
+
+// Next.js persistent cache — caches result across requests for 1 hour, tagged for purging
+const cachedGetSettings = unstable_cache(
+  async () => {
+    try {
+      await connectToDatabase();
+      let settings = await Settings.findOne().lean();
+
+      if (!settings) {
+        settings = await Settings.create({});
+      }
+
+      return { success: true, data: JSON.parse(JSON.stringify(settings)) };
+    } catch (_error) {
+      return { error: "Failed to fetch settings." };
+    }
+  },
+  ["settings"],
+  {
+    revalidate: 3600, // 1 hour
+    tags: ["settings"],
+  },
+);
 
 // 1. Fetch Global Settings
 export async function getSettings() {
-  try {
-    await connectToDatabase();
-    let settings = await Settings.findOne().lean();
-
-    // If it's the very first time booting the app, create the default singleton document
-    if (!settings) {
-      settings = await Settings.create({});
-    }
-
-    return { success: true, data: JSON.parse(JSON.stringify(settings)) };
-  } catch (_error) {
-    return { error: "Failed to fetch settings." };
-  }
+  return await fetchSettingsInternal();
 }
 
 // 2. Update Global Settings
@@ -41,7 +59,6 @@ export async function updateSettings(data: SettingsInput) {
   try {
     await connectToDatabase();
 
-    // Security check: If a non-admin tries to hack the request and change SEO/Logo, we strip those fields out.
     const updatePayload = { ...validatedData.data };
     if (!isAdmin) {
       delete (updatePayload as any).siteDescription;
@@ -52,14 +69,13 @@ export async function updateSettings(data: SettingsInput) {
       delete (updatePayload as any).seoImage;
     }
 
-    // The Singleton Upsert
     await Settings.findOneAndUpdate(
-      {}, // Empty filter targets the first/only document
+      {},
       { $set: updatePayload },
       { new: true, upsert: true },
     );
 
-    revalidatePath("/", "layout"); // Revalidates the entire app so the new Logo shows everywhere!
+    revalidatePath("/", "layout");
     return { success: true, message: "Settings updated successfully." };
   } catch (error) {
     return { error: "Failed to update settings." };

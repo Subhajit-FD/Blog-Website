@@ -25,7 +25,8 @@ export default async function Footer() {
                   <Image
                     src={siteData.logoUrl}
                     alt="Brand Logo"
-                    fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-contain"
                   />
                 </div>
@@ -104,36 +105,38 @@ export default async function Footer() {
             <h4 className="font-semibold text-foreground">Connect</h4>
             <div className="flex flex-wrap gap-3">
               {siteData?.shareOptions && siteData.shareOptions.length > 0 ? (
-                siteData.shareOptions.map((social: any) => (
-                  <a
-                    key={social.platform || social.name}
-                    href={social.baseUrl || social.urlBase || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center w-9 h-9 rounded-full bg-muted shadow-sm hover:shadow-md hover:bg-primary/10"
-                    title={social.platform || social.name}
-                  >
-                    {social.icon &&
-                    (social.icon.startsWith("<svg") ||
-                      social.icon.startsWith("path")) ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-5 h-5"
-                        dangerouslySetInnerHTML={{
-                          __html: social.icon.startsWith("<svg")
-                            ? social.icon.replace(/<svg[^>]*>|<\/svg>/g, "")
-                            : `<path d="${social.icon.replace(/^path\s*d=["']|["']$/g, "")}" />`,
-                        }}
-                      />
-                    ) : (
-                      <span className="text-xs font-bold w-5 h-5 flex items-center justify-center">
-                        ?
-                      </span>
-                    )}
-                  </a>
-                ))
+                siteData.shareOptions
+                  .filter((s: any) => s.baseUrl || s.urlBase)
+                  .map((social: any) => (
+                    <a
+                      key={social.platform || social.name}
+                      href={social.baseUrl || social.urlBase || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center w-9 h-9 rounded-full bg-muted shadow-sm hover:shadow-md hover:bg-primary/10"
+                      title={social.platform || social.name}
+                    >
+                      {social.icon &&
+                      (social.icon.startsWith("<svg") ||
+                        social.icon.startsWith("path")) ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-5 h-5"
+                          dangerouslySetInnerHTML={{
+                            __html: social.icon.startsWith("<svg")
+                              ? social.icon.replace(/<svg[^>]*>|<\/svg>/g, "")
+                              : `<path d="${social.icon.replace(/^path\s*d=["']|["']$/g, "")}" />`,
+                          }}
+                        />
+                      ) : (
+                        <span className="text-xs font-bold w-5 h-5 flex items-center justify-center">
+                          ?
+                        </span>
+                      )}
+                    </a>
+                  ))
               ) : (
                 <p className="text-sm text-muted-foreground">
                   No connections available.
@@ -170,6 +173,14 @@ export default async function Footer() {
               className="hover:text-primary transition-colors"
             >
               Terms of Service
+            </Link>
+            <Link
+              href="/sitemap.xml"
+              className="hover:text-primary transition-colors"
+              target="_blank"
+              rel="noopener"
+            >
+              Sitemap
             </Link>
           </div>
         </div>

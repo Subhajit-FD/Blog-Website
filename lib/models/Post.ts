@@ -38,6 +38,12 @@ const postSchema = new Schema(
   { timestamps: true },
 );
 
+// Optimize queries with indexing
+postSchema.index({ status: 1, publishedAt: -1 });
+postSchema.index({ displayTags: 1 });
+postSchema.index({ category: 1 });
+postSchema.index({ createdAt: -1 });
+
 // Prevent Mongoose model compilation errors in development
 if (process.env.NODE_ENV !== "production" && models && models.Post) {
   // Delete the existing model to allow re-compilation with new schema

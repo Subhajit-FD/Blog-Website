@@ -5,6 +5,26 @@ import User from "@/lib/models/User";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
+/**
+ * Returns an array of bookmarked post IDs for the currently logged-in user.
+ * Used by server components to pre-highlight bookmark buttons without client fetching.
+ */
+export async function getUserBookmarks(): Promise<string[]> {
+  const session = await auth();
+  if (!session?.user?.email) return [];
+
+  try {
+    await connectToDatabase();
+    const user = await User.findOne({ email: session.user.email })
+      .select("bookmarks")
+      .lean();
+    if (!user?.bookmarks) return [];
+    return user.bookmarks.map((id: any) => id.toString());
+  } catch {
+    return [];
+  }
+}
+
 export async function toggleBookmark(postId: string, currentPath: string) {
   const session = await auth();
   if (!session?.user?.email) {

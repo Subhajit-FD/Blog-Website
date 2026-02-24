@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, FileText, Calendar, User } from "lucide-react";
+import { formatDate } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,8 @@ export default async function CategoryAllPage() {
                               <Image
                                 src={post.coverImage}
                                 alt={post.title}
-                                fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                               />
                             ) : (
@@ -92,14 +94,7 @@ export default async function CategoryAllPage() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {new Date(post.createdAt).toLocaleDateString(
-                                  undefined,
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )}
+                                {formatDate(post.createdAt)}
                               </span>
                             </div>
                           </div>

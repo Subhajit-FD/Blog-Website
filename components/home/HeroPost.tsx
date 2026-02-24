@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
+import { formatDate } from "@/lib/utils/date";
 
 interface HeroPostProps {
   post: any;
@@ -18,9 +19,11 @@ export default function HeroPost({ post }: HeroPostProps) {
         <Image
           src={post.coverImage}
           alt={post.title}
-          fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          fill
+          sizes="100vw"
           className="object-cover"
           priority
+          fetchPriority="high"
         />
       )}
       <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
@@ -49,13 +52,7 @@ export default function HeroPost({ post }: HeroPostProps) {
             <div className="flex items-center gap-2 text-sm md:text-base font-medium text-gray-300">
               <span>By {post.teamId?.name || post.author.name}</span>
               <span>•</span>
-              <span>
-                {new Date(post.createdAt).toLocaleDateString(undefined, {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
+              <span>{formatDate(post.createdAt)}</span>
             </div>
           )}
         </div>

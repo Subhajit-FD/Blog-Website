@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Script from "next/script";
+import { useState } from "react";
 import { Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,10 +49,18 @@ const LANGUAGES = [
   { code: "id", name: "Indonesian" },
 ];
 
+// Tracks if script has been injected across renders
+let scriptInjected = false;
+
 export function GoogleTranslate() {
   const [open, setOpen] = useState(false);
+  const [scriptLoading, setScriptLoading] = useState(false);
 
-  useEffect(() => {
+  const loadScript = () => {
+    if (scriptInjected) return;
+    scriptInjected = true;
+    setScriptLoading(true);
+
     // @ts-ignore
     window.googleTranslateElementInit = () => {
       // @ts-ignore
@@ -65,20 +72,38 @@ export function GoogleTranslate() {
             includedLanguages: LANGUAGES.map((l) => l.code).join(","),
             autoDisplay: false,
           },
-          "google_translate_element"
+          "google_translate_element",
         );
       }
+      setScriptLoading(false);
     };
-  }, []);
+
+    const script = document.createElement("script");
+    script.src =
+      "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+    script.async = true;
+    script.onerror = () => {
+      scriptInjected = false;
+      setScriptLoading(false);
+    };
+    document.body.appendChild(script);
+  };
+
+  const handleGlobeClick = () => {
+    loadScript();
+    setOpen(true);
+  };
 
   const handleLanguageSelect = (langCode: string) => {
-    const selectElement = document.querySelector(".goog-te-combo") as HTMLSelectElement;
+    const selectElement = document.querySelector(
+      ".goog-te-combo",
+    ) as HTMLSelectElement;
 
     if (selectElement) {
       // 1. Change the value of the hidden Google dropdown
       // If reverting to English, Google sometimes expects an empty string or "en"
       selectElement.value = langCode === "en" ? "en" : langCode;
-      
+
       // 2. Dispatch the event to trigger the translation instantly without reload
       selectElement.dispatchEvent(new Event("change", { bubbles: true }));
     } else {
@@ -93,8 +118,10 @@ export function GoogleTranslate() {
 
   return (
     <>
-      {/* Comprehensive CSS to hide ALL Google Translate UI garbage */}
-      <style dangerouslySetInnerHTML={{__html: `
+      {/* CSS to hide Google Translate UI chrome */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         /* Hide the top banner */
         .skiptranslate > iframe.skiptranslate {
           display: none !important;
@@ -125,7 +152,9 @@ export function GoogleTranslate() {
           opacity: 0 !important;
           pointer-events: none !important;
         }
-      `}} />
+      `,
+        }}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
@@ -134,6 +163,7 @@ export function GoogleTranslate() {
             size="icon"
             className="text-muted-foreground hover:text-primary transition-colors"
             title="Translate Page"
+            onClick={handleGlobeClick}
           >
             <Globe className="h-5 w-5" />
           </Button>
@@ -163,18 +193,18 @@ export function GoogleTranslate() {
               </CommandGroup>
             </CommandList>
           </Command>
+          {scriptLoading && (
+            <p className="text-xs text-muted-foreground text-center pt-1">
+              Loading translator…
+            </p>
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* The required anchor div for Google Translate (hidden visually) */}
+      {/* Hidden anchor div required by Google Translate SDK */}
       <div
         id="google_translate_element"
         className="w-0 h-0 overflow-hidden opacity-0 absolute pointer-events-none"
-      />
-
-      <Script
-        src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-        strategy="afterInteractive"
       />
     </>
   );

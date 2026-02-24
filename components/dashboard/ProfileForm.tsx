@@ -55,6 +55,7 @@ export default function ProfileForm({ user }: { user: any }) {
 
     if (result.success && result.url) {
       form.setValue("image", result.url, { shouldValidate: true });
+      await update({ image: result.url }); // Instantly update NextAuth session
       toast.success("Profile picture updated!", { id: loadingId });
     } else {
       toast.error(result.error || "Upload failed", { id: loadingId });
@@ -98,17 +99,17 @@ export default function ProfileForm({ user }: { user: any }) {
           </Avatar>
 
           <div className="space-y-2">
-            <FormLabel className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+            <label className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
               <Camera className="w-4 h-4 mr-2" />
               {isUploading ? "Uploading..." : "Change Picture"}
-              <Input
+              <input
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={handleAvatarUpload}
                 disabled={isUploading || isPending}
               />
-            </FormLabel>
+            </label>
             <p className="text-xs text-muted-foreground">
               JPG, GIF or PNG. Max size of 5MB.
             </p>

@@ -1,4 +1,4 @@
-// middleware.ts
+// proxy.ts — renamed from middleware.ts (Next.js 16 convention)
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -15,27 +15,47 @@ const redis = new Redis({
 });
 
 // 3. Configure the Rate Limiter (Sliding Window Algorithm)
-// We allow 30 requests per 10 seconds per IP address.
+// Raised to 60 req / 10s to avoid false-positives on legit dashboard navigation.
 const ratelimit = new Ratelimit({
   redis: redis,
-  limiter: Ratelimit.slidingWindow(30, "10 s"),
-  analytics: true, // Gives you cool charts in the Upstash dashboard!
+  limiter: Ratelimit.slidingWindow(60, "10 s"),
+  // Only enable analytics in production — localhost Upstash connections are unreliable
+  analytics: process.env.NODE_ENV === "production",
 });
 
 // 4. Wrap the Auth middleware with Rate Limiting
 export default auth(async (req) => {
-  // Extract the user's IP address. Fallback to localhost for development.
+  const { pathname } = req.nextUrl;
+
+  // Optimize: Only rate limit sensitive routes (API, Auth, Dashboard writes)
+  // Public informational pages should be as fast as possible.
+  const isSensitiveRoute =
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/dashboard");
+
+  if (!isSensitiveRoute) {
+    return NextResponse.next();
+  }
+
+  // Skip rate limiting entirely in development — avoids false positives on localhost
+  if (process.env.NODE_ENV !== "production") {
+    return NextResponse.next();
+  }
+
+  // Extract the user's IP address
   const ip =
     (req as any).ip || req.headers.get("x-forwarded-for") || "127.0.0.1";
 
   // Check the IP against our Redis store
-  const { success, pending, limit, reset, remaining } = await ratelimit.limit(
+  const { success, limit, reset, remaining } = await ratelimit.limit(
     `ratelimit_${ip}`,
   );
 
   // If they exceed the limit, block the request instantly at the Edge
   if (!success) {
-    console.warn(`🛑 Rate limit exceeded for IP: ${ip}`);
+    console.warn(`🛑 Rate limit exceeded for IP: ${ip} on ${pathname}`);
 
     return new NextResponse(
       JSON.stringify({

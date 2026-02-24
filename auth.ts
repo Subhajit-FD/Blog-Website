@@ -122,8 +122,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // Allows updating the session dynamically
       if (trigger === "update" && session) {
-        token.otpVerified = session.otpVerified;
-        // token.permissions = session.permissions;
+        if (session.name) token.name = session.name;
+        if (session.image) token.picture = session.image;
+        if (session.otpVerified !== undefined)
+          token.otpVerified = session.otpVerified;
       }
 
       return token;
@@ -133,6 +135,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.permissions = token.permissions as number;
         session.user.otpVerified = token.otpVerified as boolean;
+
+        // Ensure manual token updates are returned to the client
+        if (token.name) session.user.name = token.name as string;
+        if (token.picture) session.user.image = token.picture as string;
       }
       return session;
     },

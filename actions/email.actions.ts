@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { auth } from "@/auth";
 import { PERMISSIONS } from "@/lib/config/permissions";
 import { revalidatePath } from "next/cache";
+import { getSettings } from "./settings.actions";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -23,8 +24,9 @@ export async function sendStaffEmail(
   if (!canWrite) return { error: "Permission denied." };
 
   try {
+    const siteData = await getSettings();
     const { data, error } = await resend.emails.send({
-      from: `CMS Team <${process.env.RESEND_EMAIL_DOMAIN}>`,
+      from: `${siteData.data?.siteName} <${process.env.RESEND_EMAIL_DOMAIN}>`,
       to,
       subject,
       html: `<div>${body}</div>`,

@@ -104,7 +104,7 @@ export default function InteractiveAreaChart() {
   return (
     <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col mb-8">
       {/* Header Segment */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between border-b p-6 gap-6">
+      <div className="flex flex-col md:flex-row md:items-start justify-between border-b p-4 md:p-6 gap-4 md:gap-6">
         <div className="space-y-1">
           <h2 className="text-xl font-bold tracking-tight">Total Visitors</h2>
           <p className="text-sm text-muted-foreground">
@@ -180,7 +180,7 @@ export default function InteractiveAreaChart() {
 
       {/* Chart Segment */}
       {!isLoading && !error && (
-        <div className="p-6 pt-0 mt-6 h-[350px]">
+        <div className="p-4 md:p-6 pt-0 mt-6 h-[300px] md:h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={filteredData}

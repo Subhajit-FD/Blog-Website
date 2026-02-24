@@ -48,7 +48,7 @@ export default function MemoBoard({
   };
 
   return (
-    <div className="bg-card border rounded-xl shadow-sm p-6 flex flex-col h-[500px]">
+    <div className="bg-card border rounded-xl shadow-sm p-4 md:p-6 flex flex-col h-[500px]">
       <div className="flex items-center gap-2 mb-4 text-amber-600 dark:text-amber-500">
         <Clock className="w-5 h-5" />
         <h2 className="text-lg font-bold text-foreground">

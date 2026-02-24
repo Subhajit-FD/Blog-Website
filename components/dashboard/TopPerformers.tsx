@@ -98,8 +98,8 @@ export default function TopPerformers({ posts }: TopPerformersProps) {
               data={sortedData}
               margin={{
                 top: 10,
-                right: 10,
-                left: -20,
+                right: 0,
+                left: -30,
                 bottom: 0,
               }}
             >
@@ -112,10 +112,7 @@ export default function TopPerformers({ posts }: TopPerformersProps) {
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value) => value}
-                className="text-xs font-medium fill-muted-foreground"
-                tick={{ fill: "var(--muted-foreground)" }}
-                dy={10}
+                tick={false}
               />
               <YAxis
                 axisLine={false}
@@ -131,7 +128,7 @@ export default function TopPerformers({ posts }: TopPerformersProps) {
                 dataKey={filter}
                 fill={`var(--chart-${filter === "views" ? "1" : "2"})`}
                 radius={[4, 4, 0, 0]}
-                maxBarSize={50}
+                maxBarSize={40}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -143,36 +140,34 @@ export default function TopPerformers({ posts }: TopPerformersProps) {
       </div>
 
       {/* Traditional List below for easier navigation */}
-      <div className="mt-8 pt-6 border-t space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+      <div className="mt-8 pt-6 border-t flex flex-col gap-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
           Data Breakdown
         </h3>
         {sortedData.map((post, index) => (
           <Link
             key={post.slug}
             href={`/blog/${post.slug}`}
-            className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg transition-colors border group"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-card hover:bg-accent/50 rounded-lg transition-colors border group"
           >
-            <div className="flex items-center gap-4">
-              <span
-                className={`text-lg font-black w-6 text-muted-foreground/30 transition-colors`}
-              >
+            <div className="flex items-start sm:items-center gap-2 sm:gap-4">
+              <span className="text-base font-black w-4 text-muted-foreground/40 shrink-0 mt-0.5 sm:mt-0">
                 {index + 1}
               </span>
-              <span className="font-medium group-hover:text-primary line-clamp-1">
+              <span className="font-medium group-hover:text-primary line-clamp-2 sm:line-clamp-1 leading-snug">
                 {post.fullTitle}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-sm text-foreground">
+            <div className="flex items-center gap-4 text-sm text-foreground ml-6 sm:ml-0 mt-1 sm:mt-0">
               <span
-                className={`flex items-center w-12 justify-end ${filter === "views" ? "font-bold" : "text-muted-foreground"}`}
+                className={`flex items-center gap-1 w-14 justify-end ${filter === "views" ? "font-bold text-primary" : "text-muted-foreground"}`}
               >
-                <Eye className="w-3 h-3 mr-1" /> {post.views}
+                <Eye className="w-3.5 h-3.5" /> {post.views}
               </span>
               <span
-                className={`flex items-center w-12 justify-end ${filter === "likes" ? "font-bold" : "text-muted-foreground"}`}
+                className={`flex items-center gap-1 w-14 justify-end ${filter === "likes" ? "font-bold text-red-500" : "text-muted-foreground"}`}
               >
-                <Heart className="w-3 h-3 mr-1" /> {post.likes}
+                <Heart className="w-3.5 h-3.5" /> {post.likes}
               </span>
             </div>
           </Link>

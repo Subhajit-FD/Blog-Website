@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { FileText } from "lucide-react";
+import { formatDate } from "@/lib/utils/date";
 
 interface TrendingSidebarProps {
   trendingPosts: any[];
@@ -37,7 +38,8 @@ export default function TrendingSidebar({
                 <Image
                   src={post.coverImage}
                   alt={post.title}
-                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover transition-transform group-hover:scale-105"
                 />
               ) : (
@@ -51,11 +53,7 @@ export default function TrendingSidebar({
                 {post.title}
               </h4>
               <span className="text-xs text-muted-foreground">
-                {new Date(post.createdAt).toLocaleDateString(undefined, {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {formatDate(post.createdAt)}
               </span>
               <p className="text-xs text-muted-foreground">
                 By {post.teamId?.name || post.author?.name}

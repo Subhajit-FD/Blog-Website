@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getCategoryBySlug } from "@/actions/category.actions";
 import { getPostsByCategory } from "@/actions/post.actions";
 import { Metadata } from "next";
+import { formatDate } from "@/lib/utils/date";
 
 interface CategoryPageProps {
   params: Promise<{
@@ -53,7 +54,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <Image
             src={category.coverImage}
             alt={category.title}
-            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
             priority
           />
@@ -96,7 +98,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     <Image
                       src={post.coverImage}
                       alt={post.title}
-                      fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
@@ -114,7 +117,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                   </p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 tracking-wide font-medium">
                     <span>
-                      {new Date(post.createdAt).toLocaleDateString(undefined, {
+                      {formatDate(post.createdAt, {
                         month: "long",
                         day: "numeric",
                         year: "numeric",

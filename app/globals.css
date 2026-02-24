@@ -139,10 +139,8 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
     @apply bg-background text-foreground;
   }
 }
@@ -180,7 +178,7 @@ body {
 .skiptranslate iframe {
   display: none !important;
 }
-#goog-gt-tt{
+#goog-gt-tt {
   display: none !important;
   width: 0 !important;
   height: 0 !important;

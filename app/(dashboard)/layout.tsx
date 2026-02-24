@@ -35,7 +35,9 @@ export default async function DashboardLayout({
             </div>
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 bg-muted/40">{children}</main>
+        <main className="flex-1 min-w-0 p-4 md:p-6 bg-muted/40">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import Category from "@/lib/models/Category";
 import { categorySchema, CategoryInput } from "@/lib/validations/category";
 import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { PERMISSIONS } from "@/lib/config/permissions";
 
 // Helper function to check permissions
@@ -14,12 +14,10 @@ async function checkPermissions(requiredPermission: number) {
 
   const userPerms = session.user.permissions;
 
-  // 1. Master Admin Override
   if ((userPerms & PERMISSIONS.ADMINISTRATOR) === PERMISSIONS.ADMINISTRATOR) {
     return session.user;
   }
 
-  // 2. Specific Permission Check
   if ((userPerms & requiredPermission) !== requiredPermission) {
     throw new Error("Forbidden: You do not have the required permissions.");
   }
@@ -39,7 +37,6 @@ export async function createCategory(data: CategoryInput) {
 
     await connectToDatabase();
 
-    // Check if slug is already taken (Slugs must be unique for URLs to work)
     const existingCategory = await Category.findOne({
       slug: validatedData.data.slug,
     });
@@ -49,8 +46,8 @@ export async function createCategory(data: CategoryInput) {
 
     await Category.create(validatedData.data);
 
-    revalidatePath("/dashboard/categories"); // Refresh the dashboard table
-    revalidatePath("/blog"); // Refresh the public blog
+    revalidatePath("/dashboard/categories");
+    revalidatePath("/blog");
 
     return { success: true, message: "Category created successfully!" };
   } catch (error: any) {
@@ -58,14 +55,12 @@ export async function createCategory(data: CategoryInput) {
   }
 }
 
-// 2. READ CATEGORIES (Get all)
+// 2. READ CATEGORIES (For Dashboard — no cache, always fresh)
 export async function getCategories() {
   try {
     await connectToDatabase();
-    // Use .lean() to return plain JS objects, preventing the DataCloneError!
     const categories = await Category.find().sort({ createdAt: -1 }).lean();
 
-    // We stringify the _id to avoid React hydration issues with MongoDB ObjectIds
     return {
       success: true,
       data: categories.map((cat) => ({
@@ -88,7 +83,6 @@ export async function updateCategory(id: string, data: CategoryInput) {
 
     await connectToDatabase();
 
-    // Check if the NEW slug belongs to a DIFFERENT category
     const duplicate = await Category.findOne({
       slug: validatedData.data.slug,
       _id: { $ne: id },
@@ -120,39 +114,52 @@ export async function deleteCategory(id: string) {
   }
 }
 
-// 5. GET PUBLIC CATEGORIES
-export async function getPublicCategories() {
-  try {
-    await connectToDatabase();
-    // Only fetch what we need for the navbar to keep it lightning fast
-    const categories = await Category.find()
-      .select("title slug")
-      .limit(10)
-      .lean();
-    return {
-      success: true,
-      data: categories.map((c: any) => ({ ...c, _id: c._id.toString() })),
-    };
-  } catch (error) {
-    return { error: "Failed to fetch categories" };
-  }
-}
+// 5. GET PUBLIC CATEGORIES — cached for 1 hour, revalidated on category change
+export const getPublicCategories = unstable_cache(
+  async () => {
+    try {
+      await connectToDatabase();
+      const categories = await Category.find()
+        .select("title slug")
+        .limit(10)
+        .lean();
+      return {
+        success: true,
+        data: categories.map((c: any) => ({ ...c, _id: c._id.toString() })),
+      };
+    } catch (error) {
+      return { error: "Failed to fetch categories" };
+    }
+  },
+  ["public-categories"],
+  {
+    revalidate: 3600,
+    tags: ["categories"],
+  },
+);
 
-// 6. GET CATEGORY BY SLUG
+// 6. GET CATEGORY BY SLUG — cached per slug for 1 hour
 export async function getCategoryBySlug(slug: string) {
-  try {
-    await connectToDatabase();
-    const category = await Category.findOne({ slug }).lean();
-    if (!category) return { error: "Category not found" };
+  const cached = unstable_cache(
+    async (s: string) => {
+      try {
+        await connectToDatabase();
+        const category = await Category.findOne({ slug: s }).lean();
+        if (!category) return { error: "Category not found" };
 
-    return {
-      success: true,
-      data: {
-        ...category,
-        _id: category._id.toString(),
-      },
-    };
-  } catch (error) {
-    return { error: "Failed to fetch category" };
-  }
+        return {
+          success: true,
+          data: {
+            ...category,
+            _id: category._id.toString(),
+          },
+        };
+      } catch (error) {
+        return { error: "Failed to fetch category" };
+      }
+    },
+    [`category-${slug}`],
+    { revalidate: 3600, tags: ["categories"] },
+  );
+  return cached(slug);
 }

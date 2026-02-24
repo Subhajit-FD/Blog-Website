@@ -7,7 +7,7 @@ import User from "@/lib/models/User"; // Required for populate()
 import Team from "@/lib/models/Team"; // Required for populate()
 import { postSchema, PostInput } from "@/lib/validations/post";
 import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { PERMISSIONS } from "@/lib/config/permissions";
 
 // Helper for strict role-based permissions
@@ -32,14 +32,16 @@ async function checkPermissions(permission: number) {
   return user;
 }
 
-// Lazy update: Flip "SCHEDULED" to "PUBLISHED" if time has passed
-async function checkScheduledPosts() {
-  await connectToDatabase();
-  await Post.updateMany(
-    { status: "SCHEDULED", publishedAt: { $lte: new Date() } },
-    { $set: { status: "PUBLISHED" } },
-  );
-}
+// 0. Helper for Public Status Filtering
+const getPublicStatusFilter = () => {
+  const now = new Date();
+  return {
+    $or: [
+      { status: "PUBLISHED" },
+      { status: "SCHEDULED", publishedAt: { $lte: now } },
+    ],
+  };
+};
 
 // 1. CREATE POST
 export async function createPost(data: PostInput) {
@@ -62,6 +64,7 @@ export async function createPost(data: PostInput) {
 
     revalidatePath("/dashboard/posts");
     revalidatePath("/blog");
+    revalidatePath("/", "page");
 
     return {
       success: true,
@@ -76,7 +79,6 @@ export async function createPost(data: PostInput) {
 export async function getPosts() {
   try {
     await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
 
     // .populate() fetches the linked Category and User data instead of just returning their IDs
     const posts = await Post.find()
@@ -129,6 +131,8 @@ export async function updatePost(id: string, data: PostInput) {
 
     revalidatePath("/dashboard/posts");
     revalidatePath(`/blog/${validatedData.data.slug}`);
+    revalidatePath("/blog");
+    revalidatePath("/", "page");
 
     return { success: true, message: "Post updated successfully!" };
   } catch (error: any) {
@@ -146,6 +150,7 @@ export async function deletePost(id: string) {
 
     revalidatePath("/dashboard/posts");
     revalidatePath("/blog");
+    revalidatePath("/", "page");
 
     return { success: true, message: "Post permanently deleted." };
   } catch (error: any) {
@@ -181,58 +186,47 @@ export async function getPostById(id: string) {
   }
 }
 
-// 6. FETCH PUBLIC POSTS
-export async function getPublicPosts() {
-  try {
-    await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
-    // Only fetch PUBLISHED posts, never drafts!
-    // Only fetch PUBLISHED posts, never drafts!
-    // And if SCHEDULED, must be past publishedAt
-    const now = new Date();
-    const posts = await Post.find({
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
-    })
-      .populate({ path: "category", select: "title slug", model: Category })
-      .populate({ path: "author", select: "name image", model: User })
-      .populate({ path: "teamId", select: "name", model: Team })
-      .sort({ createdAt: -1 })
-      .lean();
+// 6. FETCH PUBLIC POSTS — cached 30 minutes, purged when posts mutate
+export const getPublicPosts = unstable_cache(
+  async () => {
+    try {
+      await connectToDatabase();
+      const posts = await Post.find(getPublicStatusFilter())
+        .populate({ path: "category", select: "title slug", model: Category })
+        .populate({ path: "author", select: "name image", model: User })
+        .populate({ path: "teamId", select: "name", model: Team })
+        .sort({ createdAt: -1 })
+        .lean();
 
-    return {
-      success: true,
-      data: posts.map((post: any) => ({
-        ...post,
-        _id: post._id.toString(),
-        category: post.category
-          ? { ...post.category, _id: post.category._id.toString() }
-          : null,
-        author: post.author
-          ? { ...post.author, _id: post.author._id.toString() }
-          : null,
-      })),
-    };
-  } catch (error) {
-    return { error: "Failed to fetch posts." };
-  }
-}
+      return {
+        success: true,
+        data: posts.map((post: any) => ({
+          ...post,
+          _id: post._id.toString(),
+          category: post.category
+            ? { ...post.category, _id: post.category._id.toString() }
+            : null,
+          author: post.author
+            ? { ...post.author, _id: post.author._id.toString() }
+            : null,
+        })),
+      };
+    } catch (error) {
+      return { error: "Failed to fetch posts." };
+    }
+  },
+  ["public-posts"],
+  { revalidate: 1800, tags: ["posts"] },
+);
 
 // 7. FETCH PUBLIC POST BY SLUG
 export async function getPostBySlug(slug: string) {
   try {
     await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
 
-    const now = new Date();
     const post = await Post.findOne({
       slug,
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
+      ...getPublicStatusFilter(),
     })
       .populate({ path: "category", select: "title slug", model: Category })
       .populate({ path: "author", select: "name image", model: User })
@@ -264,14 +258,10 @@ export async function getPostBySlug(slug: string) {
 export async function getPostsByCategory(categoryId: string) {
   try {
     await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
-    const now = new Date();
+
     const posts = await Post.find({
       category: categoryId,
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
+      ...getPublicStatusFilter(),
     })
       .populate({ path: "category", select: "title slug", model: Category })
       .populate({ path: "author", select: "name image", model: User })
@@ -304,10 +294,7 @@ export async function searchPosts(query: string) {
     const regex = new RegExp(query, "i"); // Case-insensitive search
 
     const posts = await Post.find({
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: new Date() } },
-      ],
+      ...getPublicStatusFilter(),
       $and: [
         {
           $or: [{ title: { $regex: regex } }, { tags: { $in: [regex] } }],
@@ -335,57 +322,49 @@ export async function searchPosts(query: string) {
   }
 }
 
-// 10. GET EDITOR'S CHOICE POSTS
-export async function getEditorsChoicePosts() {
-  try {
-    await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
-    const now = new Date();
-    const posts = await Post.find({
-      displayTags: "Editor Choice",
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
-    })
-      .populate({ path: "category", select: "title slug", model: Category })
-      .populate({ path: "author", select: "name image", model: User })
-      .populate({ path: "teamId", select: "name", model: Team })
-      .sort({ createdAt: -1 })
-      .limit(4)
-      .lean();
+// 10. GET EDITOR'S CHOICE POSTS — cached 30 minutes
+export const getEditorsChoicePosts = unstable_cache(
+  async () => {
+    try {
+      await connectToDatabase();
+      const posts = await Post.find({
+        displayTags: "Editor Choice",
+        ...getPublicStatusFilter(),
+      })
+        .populate({ path: "category", select: "title slug", model: Category })
+        .populate({ path: "author", select: "name image", model: User })
+        .populate({ path: "teamId", select: "name", model: Team })
+        .sort({ createdAt: -1 })
+        .limit(4)
+        .lean();
 
-    return {
-      success: true,
-      data: posts.map((post: any) => ({
-        ...post,
-        _id: post._id.toString(),
-        category: post.category
-          ? { ...post.category, _id: post.category._id.toString() }
-          : null,
-        author: post.author
-          ? { ...post.author, _id: post.author._id.toString() }
-          : null,
-      })),
-    };
-  } catch (error) {
-    return { error: "Failed to fetch Editor's Choice posts." };
-  }
-}
+      return {
+        success: true,
+        data: posts.map((post: any) => ({
+          ...post,
+          _id: post._id.toString(),
+          category: post.category
+            ? { ...post.category, _id: post.category._id.toString() }
+            : null,
+          author: post.author
+            ? { ...post.author, _id: post.author._id.toString() }
+            : null,
+        })),
+      };
+    } catch (error) {
+      return { error: "Failed to fetch Editor's Choice posts." };
+    }
+  },
+  ["editors-choice-posts"],
+  { revalidate: 1800, tags: ["posts"] },
+);
 
 // 11. GET RANDOM CATEGORY POST (For Homepage Feature)
 export async function getRandomCategoryPost() {
   try {
     await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
 
-    const now = new Date();
-    const publishedQuery = {
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
-    };
+    const publishedQuery = getPublicStatusFilter();
 
     // 1. Get all category IDs that have at least one published post
     const categoryIds = await Post.distinct("category", publishedQuery);
@@ -428,97 +407,84 @@ export async function getRandomCategoryPost() {
   }
 }
 
-// 11. GET TRENDING POSTS
-export async function getTrendingPosts() {
-  try {
-    await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
-    const now = new Date();
-    // Prioritize posts with "Trending" tag.
-    // If we just want to show posts that ARE trending, we filter by that tag.
-    const posts = await Post.find({
-      displayTags: "Trending",
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
-    })
-      .limit(5)
-      .populate({ path: "category", select: "title slug", model: Category })
-      .populate({ path: "author", select: "name image", model: User })
-      .populate({ path: "teamId", select: "name", model: Team })
-      .lean();
+// 11. GET TRENDING POSTS — cached 30 minutes
+export const getTrendingPosts = unstable_cache(
+  async () => {
+    try {
+      await connectToDatabase();
+      const posts = await Post.find({
+        displayTags: "Trending",
+        ...getPublicStatusFilter(),
+      })
+        .limit(5)
+        .populate({ path: "category", select: "title slug", model: Category })
+        .populate({ path: "author", select: "name image", model: User })
+        .populate({ path: "teamId", select: "name", model: Team })
+        .lean();
 
-    return {
-      success: true,
-      data: posts.map((post: any) => ({
-        ...post,
-        _id: post._id.toString(),
-        category: post.category
-          ? { ...post.category, _id: post.category._id.toString() }
-          : null,
-        author: post.author
-          ? { ...post.author, _id: post.author._id.toString() }
-          : null,
-      })),
-    };
-  } catch (error) {
-    return { error: "Failed to fetch Trending posts." };
-  }
-}
+      return {
+        success: true,
+        data: posts.map((post: any) => ({
+          ...post,
+          _id: post._id.toString(),
+          category: post.category
+            ? { ...post.category, _id: post.category._id.toString() }
+            : null,
+          author: post.author
+            ? { ...post.author, _id: post.author._id.toString() }
+            : null,
+        })),
+      };
+    } catch (error) {
+      return { error: "Failed to fetch Trending posts." };
+    }
+  },
+  ["trending-posts"],
+  { revalidate: 1800, tags: ["posts"] },
+);
 
-// 12. GET LATEST POST (HERO)
-export async function getLatestPost() {
-  try {
-    await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
-    const now = new Date();
-    const post = await Post.findOne({
-      $or: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", publishedAt: { $lte: now } },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .populate({ path: "category", select: "title slug", model: Category })
-      .populate({ path: "author", select: "name image", model: User })
-      .populate({ path: "teamId", select: "name", model: Team })
-      .lean();
+// 12. GET LATEST POST (HERO) — cached 30 minutes
+export const getLatestPost = unstable_cache(
+  async () => {
+    try {
+      await connectToDatabase();
+      const post = await Post.findOne(getPublicStatusFilter())
+        .sort({ createdAt: -1 })
+        .populate({ path: "category", select: "title slug", model: Category })
+        .populate({ path: "author", select: "name image", model: User })
+        .populate({ path: "teamId", select: "name", model: Team })
+        .lean();
 
-    if (!post) return { error: "No posts found." };
+      if (!post) return { error: "No posts found." };
 
-    return {
-      success: true,
-      data: {
-        ...post,
-        _id: post._id.toString(),
-        category: post.category
-          ? { ...post.category, _id: post.category._id.toString() }
-          : null,
-        author: post.author
-          ? { ...post.author, _id: post.author._id.toString() }
-          : null,
-      },
-    };
-  } catch (error) {
-    return { error: "Failed to fetch latest post." };
-  }
-}
+      return {
+        success: true,
+        data: {
+          ...post,
+          _id: post._id.toString(),
+          category: post.category
+            ? { ...post.category, _id: post.category._id.toString() }
+            : null,
+          author: post.author
+            ? { ...post.author, _id: post.author._id.toString() }
+            : null,
+        },
+      };
+    } catch (error) {
+      return { error: "Failed to fetch latest post." };
+    }
+  },
+  ["latest-post"],
+  { revalidate: 1800, tags: ["posts"] },
+);
 // 13. GET RANDOM POSTS (For Pagination Feature)
 export async function getRandomPosts(limit: number = 12) {
   try {
     await connectToDatabase();
-    await checkScheduledPosts(); // <--- Lazy update
 
-    const now = new Date();
     const pipeline = [
       {
-        $match: {
-          $or: [
-            { status: "PUBLISHED" },
-            { status: "SCHEDULED", publishedAt: { $lte: now } },
-          ],
-        },
+        $match: getPublicStatusFilter(),
       },
       { $sample: { size: limit } },
     ];

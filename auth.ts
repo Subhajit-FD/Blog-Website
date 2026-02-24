@@ -125,7 +125,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.otpVerified = session.otpVerified;
         // token.permissions = session.permissions;
       }
-      // console.log("[AuthDebug] JWT Callback:", { token });
+
       return token;
     },
     async session({ session, token }) {
@@ -134,11 +134,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.permissions = token.permissions as number;
         session.user.otpVerified = token.otpVerified as boolean;
       }
-      console.log("[AuthDebug] Session Callback:", {
-        email: session.user?.email,
-        permissions: session.user?.permissions,
-        otpVerified: session.user?.otpVerified,
-      });
       return session;
     },
   },

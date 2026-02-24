@@ -183,7 +183,7 @@ function ShareOptions({ url, title, text, image }: ShareDialogProps) {
       {image && (
         <div className="flex items-start gap-4 p-3 rounded-lg border bg-muted/30 overflow-hidden w-full">
           <div className="relative w-16 h-16 rounded-md overflow-hidden shrink-0">
-            <Image src={image} alt={title} fill className="object-cover" />
+            <Image src={image} alt={title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
           </div>
           <div className="flex-1 flex flex-col min-w-0">
             <span className="font-semibold text-sm truncate">{title}</span>

@@ -75,7 +75,7 @@ export default function CategoriesPage() {
                 <Image
                   src={category.coverImage}
                   alt={category.title}
-                  fill
+                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover"
                 />
               )}

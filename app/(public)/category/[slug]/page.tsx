@@ -53,7 +53,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <Image
             src={category.coverImage}
             alt={category.title}
-            fill
+            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
             priority
           />
@@ -96,7 +96,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     <Image
                       src={post.coverImage}
                       alt={post.title}
-                      fill
+                      fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (

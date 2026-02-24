@@ -13,7 +13,7 @@ export default function SearchBar() {
         onChange={async (e) => {
           if (e.target.value.length > 2) {
             const results = await globalSearch(e.target.value);
-            console.log(results); // Later: Render these in a floating Command Palette
+            // Later: Render these in a floating Command Palette
           }
         }}
       />

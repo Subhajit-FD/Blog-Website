@@ -1,9 +1,0 @@
-[dotenv@17.3.1] injecting env (9) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
-Connected to DB
-
---- User Permissions ---
-User: subhajit choudhury (subhajitchoudhuryofficial@gmail.com)
- - Permissions Bitmask: 4096
- - Roles (Deprecated): undefined
- - Active Permissions: ADMINISTRATOR (4096)
-------------------------

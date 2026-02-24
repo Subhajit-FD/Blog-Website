@@ -31,10 +31,6 @@ export const authConfig = {
         const hasDashboardAccess = (userPerms & PERM_VIEW_DASHBOARD) !== 0;
         const isAdmin = (userPerms & PERM_ADMINISTRATOR) !== 0;
 
-        console.log(
-          `[AuthDebug] User: ${auth?.user?.email}, Perms: ${userPerms}, IsAdmin: ${isAdmin}, OTPVerified: ${isOtpVerified}`,
-        );
-
         if (!hasDashboardAccess && !isAdmin) {
           return Response.redirect(new URL("/", nextUrl));
         }

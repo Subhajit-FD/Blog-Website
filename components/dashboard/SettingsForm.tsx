@@ -423,7 +423,7 @@ export default function SettingsForm({
                     <Image
                       src={seoImageValue as string}
                       alt="SEO Graph Image"
-                      fill
+                      fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover p-1"
                     />
                   </div>
@@ -462,7 +462,7 @@ export default function SettingsForm({
                       <Image
                         src={logoUrlValue as string}
                         alt="Logo"
-                        fill
+                        fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-contain p-1"
                       />
                     </div>
@@ -485,7 +485,7 @@ export default function SettingsForm({
                       <Image
                         src={faviconUrlValue as string}
                         alt="Favicon"
-                        fill
+                        fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-contain p-1"
                       />
                     </div>
@@ -508,7 +508,7 @@ export default function SettingsForm({
                       <Image
                         src={appleTouchIconUrlValue as string}
                         alt="Touch Icon"
-                        fill
+                        fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-cover p-1"
                       />
                     </div>

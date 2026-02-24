@@ -17,22 +17,15 @@ export async function deleteImageFromImageKit(url: string) {
 
   try {
     const endpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!;
-    console.log(`[ImageKit Delete] Attempting to delete: ${url}`);
-    console.log(`[ImageKit Delete] Configured endpoint: ${endpoint}`);
-
     // Check if the URL is actually an ImageKit URL
     if (!url.startsWith(endpoint)) {
-      console.log(`[ImageKit Delete] URL does not match endpoint. Skipping.`);
       return { success: true };
     }
 
     const path = url.replace(endpoint, "");
     const name = path.split("/").pop();
 
-    console.log(`[ImageKit Delete] Extracted path: ${path}, name: ${name}`);
-
     if (!name) {
-      console.log(`[ImageKit Delete] No valid name found. Skipping.`);
       return { success: true };
     }
 
@@ -40,10 +33,6 @@ export async function deleteImageFromImageKit(url: string) {
     const files = await imagekit.listFiles({
       searchQuery: `name="${name}"`,
     });
-
-    console.log(
-      `[ImageKit Delete] Found ${files.length} matching files by name.`,
-    );
 
     // Find the exact match
     const file: any = files.find(
@@ -55,17 +44,10 @@ export async function deleteImageFromImageKit(url: string) {
     );
 
     if (file && file.fileId) {
-      console.log(
-        `[ImageKit Delete] Exact match found! fileId: ${file.fileId}. Calling delete API...`,
-      );
       await imagekit.deleteFile(file.fileId);
-      console.log(`[ImageKit Delete] File successfully deleted from ImageKit.`);
       return { success: true };
     }
 
-    console.log(
-      `[ImageKit Delete] No exact match found in the API response. Skipping.`,
-    );
     return { success: true };
   } catch (error) {
     console.error("[ImageKit Delete] Error:", error);

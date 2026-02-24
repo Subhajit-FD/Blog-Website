@@ -54,7 +54,7 @@ export default async function PublicBlogFeed() {
                   <Image
                     src={post.coverImage}
                     alt={post.coverImageAlt || post.title}
-                    fill
+                    fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 )}
@@ -82,7 +82,7 @@ export default async function PublicBlogFeed() {
                         <Image
                           src={post.author.image}
                           alt={post.author.name}
-                          fill
+                          fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-cover"
                         />
                       ) : (

@@ -76,6 +76,9 @@ export async function updateSettings(data: SettingsInput) {
     );
 
     revalidatePath("/", "layout");
+    revalidatePath("/privacy");
+    revalidatePath("/terms");
+    revalidatePath("/(dashboard)/dashboard/settings", "page");
     return { success: true, message: "Settings updated successfully." };
   } catch (error) {
     return { error: "Failed to update settings." };

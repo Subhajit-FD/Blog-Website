@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { getSettings } from "@/actions/settings.actions";
 import { PERMISSIONS } from "@/lib/config/permissions";
 import { redirect } from "next/navigation";
-import SettingsForm from "@/components/dashboard/SettingsForm";
+import SiteSettingsForm from "@/components/settings/SiteSettingsForm";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -20,15 +20,19 @@ export default async function SettingsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Global Settings</h1>
-        <p className="text-muted-foreground">
-          Manage site configuration, branding, and global variables.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-primary">
+            Global Settings
+          </h1>
+          <p className="text-muted-foreground">
+            Manage site configuration, branding, and global variables.
+          </p>
+        </div>
       </div>
 
       {settingsData && (
-        <SettingsForm
+        <SiteSettingsForm
           initialData={settingsData}
           userPermissions={permissions}
         />

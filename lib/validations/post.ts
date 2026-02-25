@@ -13,9 +13,7 @@ export const postSchema = z.object({
   teamId: z.string().optional(), // Optional Team ID
   tags: z.array(z.string()).optional(), // Array of tag strings
   status: z.enum(["DRAFT", "PUBLISHED", "SCHEDULED"]),
-  displayTags: z
-    .array(z.enum(["Editor Choice", "Trending", "Popular"]))
-    .optional(),
+  displayTags: z.array(z.enum(["Editor Choice", "Trending"])).optional(),
   publishedAt: z.date().optional(),
 });
 

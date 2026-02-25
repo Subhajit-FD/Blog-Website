@@ -1,15 +1,22 @@
 import { z } from "zod";
 
 export const settingsSchema = z.object({
+  // General
   siteName: z.string().min(2, "Site name is required"),
   faviconUrl: z.string().optional(),
   appleTouchIconUrl: z.string().optional(),
   logoUrl: z.string().optional(),
+
+  // SEO
   siteDescription: z
     .string()
     .min(10, "SEO description must be at least 10 chars"),
   seoTitle: z.string().optional(),
   seoImage: z.string().optional(),
+  keywords: z.string().optional(),
+  twitterHandle: z.string().optional(),
+
+  // Social
   socialLinks: z
     .array(
       z.object({
@@ -28,6 +35,8 @@ export const settingsSchema = z.object({
       }),
     )
     .optional(),
+
+  // Animations
   animations: z
     .object({
       global: z.boolean().default(true),
@@ -41,6 +50,25 @@ export const settingsSchema = z.object({
       pageTransition: true,
       textHighlight: true,
     }),
+
+  // Custom SEO / Head Tags
+  customTags: z
+    .array(
+      z.object({
+        label: z.string().min(1, "Label is required"),
+        tagType: z.enum(["meta", "link", "script"]).default("meta"),
+        attributes: z.record(z.string(), z.string()).optional().default({}),
+        content: z.string().optional().default(""),
+        placement: z.enum(["head", "body"]).default("head"),
+      }),
+    )
+    .optional()
+    .default([]),
+
+  // Legal & About
+  aboutUs: z.string().optional(),
+  termsContent: z.string().optional(),
+  privacyContent: z.string().optional(),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;

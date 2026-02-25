@@ -200,9 +200,9 @@ export default function PostCard({
           {post.description}
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-          {post.author && (
+          {(post.teamId?.name || post.author?.name) && (
             <span className="font-semibold text-foreground capitalize">
-              By {post.teamId?.name || post.author.name}
+              By {post.teamId?.name || post.author?.name}
             </span>
           )}
           <span>•</span>

@@ -2,7 +2,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSettings } from "@/actions/settings.actions";
 import { getPopularTags } from "@/actions/tag.actions";
-import { Mail } from "lucide-react";
+import { Mail, Info } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 
 export default async function Footer() {
   const [settingsRes, tagsRes] = await Promise.all([
@@ -156,7 +163,31 @@ export default async function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between text-sm text-muted-foreground">
+        {/* 5. "Who We Are" Accordion (SEO & About Info) */}
+        {siteData?.aboutUs && (
+          <div className="mt-12 py-6 border-t border-border">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="about-us" className="border-none">
+                <AccordionTrigger className="hover:no-underline py-0 group">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <Info className="w-4 h-4 text-primary group-hover:rotate-12 transition-transform" />
+                    <span>Who We Are</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4 text-muted-foreground leading-relaxed max-w-4xl">
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: siteData.aboutUs.replace(/\n/g, "<br/>"),
+                    }}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        )}
+
+        <div className="mt-8 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between text-sm text-muted-foreground">
           <p>
             © {new Date().getFullYear()} {siteData?.siteName || "CMS 3.0"}. All
             rights reserved.

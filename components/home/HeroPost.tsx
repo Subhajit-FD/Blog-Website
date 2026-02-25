@@ -35,7 +35,7 @@ export default function HeroPost({ post }: HeroPostProps) {
             {post.category.title}
           </Badge>
         )}
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight max-w-2xl tracking-tight text-shadow-sm">
+        <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] max-w-4xl tracking-tight text-shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-1200">
           {post.title}
         </h1>
         <p className="text-gray-200 text-sm md:text-base max-w-lg line-clamp-2">

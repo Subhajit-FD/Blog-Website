@@ -30,7 +30,7 @@ const postSchema = new Schema(
     // Feature Flags & Scheduling
     displayTags: {
       type: [String],
-      enum: ["Editor Choice", "Trending", "Popular"],
+      enum: ["Editor Choice", "Trending"],
       default: [],
     },
     publishedAt: { type: Date },

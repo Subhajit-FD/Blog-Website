@@ -56,7 +56,13 @@ export default async function HomePage() {
     <div className="flex flex-col min-h-dvh bg-background">
       <main className="container mx-auto px-4 md:px-6">
         {/* 1. HERO SECTION — above fold, eager loaded */}
-        <HeroPost post={latestPost} />
+        {latestPost ? (
+          <HeroPost post={latestPost} />
+        ) : (
+          <h1 className="sr-only">
+            BlogZenx — Discover the latest stories and insights
+          </h1>
+        )}
 
         {/* 2. EDITOR'S CHOICE — below fold, lazy loaded */}
         <EditorsChoice posts={editorsChoicePosts} />

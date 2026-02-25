@@ -22,9 +22,10 @@ const geistMono = Geist_Mono({
 export async function generateMetadata(): Promise<Metadata> {
   const { data: settings } = await getSettings();
 
-  const siteName = settings?.siteName || "CMS 3.0";
+  const siteName = settings?.siteName || "BlogZenx";
   const title = settings?.seoTitle || siteName;
-  const description = settings?.siteDescription || "Modern Blog Platform";
+  const description =
+    settings?.siteDescription || "Modern Blog Platform built with Next.js";
 
   return {
     title: {
@@ -32,26 +33,61 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${siteName}`,
     },
     description,
+    keywords: settings?.keywords || "blog, nextjs, react, technology",
     icons: {
       icon: settings?.faviconUrl || "/favicon.ico",
-      apple: settings?.appleTouchIconUrl,
+      apple: settings?.appleTouchIconUrl || "/apple-touch-icon.png",
     },
     openGraph: {
       title,
       description,
       siteName,
+      type: "website",
       images: settings?.seoImage ? [{ url: settings.seoImage }] : [],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      site: settings?.twitterHandle || "@blogzenx",
+      creator: settings?.twitterHandle || "@blogzenx",
       images: settings?.seoImage ? [settings.seoImage] : [],
     },
   };
 }
 
 import NextTopLoader from "nextjs-toploader";
+
+// ---------------------------------------------------------------------------
+// Custom tag injection helper
+// ---------------------------------------------------------------------------
+function renderCustomTag(tag: any, idx: number) {
+  const attrs: Record<string, string> = tag.attributes
+    ? Object.fromEntries(
+        Object.entries(tag.attributes).map(([k, v]) => [k, String(v)]),
+      )
+    : {};
+
+  switch (tag.tagType) {
+    case "link":
+      return <link key={idx} {...attrs} />;
+    case "script":
+      return tag.content ? (
+        // eslint-disable-next-line @next/next/no-sync-scripts
+        <script
+          key={idx}
+          {...attrs}
+          dangerouslySetInnerHTML={{ __html: tag.content }}
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-sync-scripts
+        <script key={idx} {...attrs} />
+      );
+    case "meta":
+    default:
+      return <meta key={idx} {...attrs} />;
+  }
+}
 
 export default async function RootLayout({
   children,
@@ -61,8 +97,16 @@ export default async function RootLayout({
   const settingsRes = await getSettings();
   const settings = settingsRes.success ? settingsRes.data : null;
 
+  const headTags: any[] = (settings?.customTags ?? []).filter(
+    (t: any) => t.placement !== "body",
+  );
+  const bodyTags: any[] = (settings?.customTags ?? []).filter(
+    (t: any) => t.placement === "body",
+  );
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>{headTags.map((tag, i) => renderCustomTag(tag, i))}</head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
@@ -86,6 +130,7 @@ export default async function RootLayout({
             </ImageKitProvider>
           </ThemeProvider>
         </SessionProvider>
+        {bodyTags.map((tag, i) => renderCustomTag(tag, i))}
       </body>
     </html>
   );

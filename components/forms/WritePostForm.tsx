@@ -189,7 +189,7 @@ export default function WritePostForm({
     });
   };
 
-  const displayTagOptions = ["Editor Choice", "Trending", "Popular"] as const;
+  const displayTagOptions = ["Editor Choice", "Trending"] as const;
 
   return (
     <div className="max-w-5xl mx-auto h-[calc(100vh-100px)]">

@@ -322,42 +322,38 @@ export async function searchPosts(query: string) {
   }
 }
 
-// 10. GET EDITOR'S CHOICE POSTS — cached 30 minutes
-export const getEditorsChoicePosts = unstable_cache(
-  async () => {
-    try {
-      await connectToDatabase();
-      const posts = await Post.find({
-        displayTags: "Editor Choice",
-        ...getPublicStatusFilter(),
-      })
-        .populate({ path: "category", select: "title slug", model: Category })
-        .populate({ path: "author", select: "name image", model: User })
-        .populate({ path: "teamId", select: "name", model: Team })
-        .sort({ createdAt: -1 })
-        .limit(4)
-        .lean();
+// 10. GET EDITOR'S CHOICE POSTS
+export async function getEditorsChoicePosts() {
+  try {
+    await connectToDatabase();
+    const posts = await Post.find({
+      displayTags: "Editor Choice",
+      ...getPublicStatusFilter(),
+    })
+      .populate({ path: "category", select: "title slug", model: Category })
+      .populate({ path: "author", select: "name image", model: User })
+      .populate({ path: "teamId", select: "name", model: Team })
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean();
 
-      return {
-        success: true,
-        data: posts.map((post: any) => ({
-          ...post,
-          _id: post._id.toString(),
-          category: post.category
-            ? { ...post.category, _id: post.category._id.toString() }
-            : null,
-          author: post.author
-            ? { ...post.author, _id: post.author._id.toString() }
-            : null,
-        })),
-      };
-    } catch (error) {
-      return { error: "Failed to fetch Editor's Choice posts." };
-    }
-  },
-  ["editors-choice-posts"],
-  { revalidate: 1800, tags: ["posts"] },
-);
+    return {
+      success: true,
+      data: posts.map((post: any) => ({
+        ...post,
+        _id: post._id.toString(),
+        category: post.category
+          ? { ...post.category, _id: post.category._id.toString() }
+          : null,
+        author: post.author
+          ? { ...post.author, _id: post.author._id.toString() }
+          : null,
+      })),
+    };
+  } catch (error) {
+    return { error: "Failed to fetch Editor's Choice posts." };
+  }
+}
 
 // 11. GET RANDOM CATEGORY POST (For Homepage Feature)
 export async function getRandomCategoryPost() {
@@ -407,76 +403,93 @@ export async function getRandomCategoryPost() {
   }
 }
 
-// 11. GET TRENDING POSTS — cached 30 minutes
-export const getTrendingPosts = unstable_cache(
-  async () => {
-    try {
-      await connectToDatabase();
-      const posts = await Post.find({
-        displayTags: "Trending",
-        ...getPublicStatusFilter(),
-      })
-        .limit(5)
-        .populate({ path: "category", select: "title slug", model: Category })
-        .populate({ path: "author", select: "name image", model: User })
-        .populate({ path: "teamId", select: "name", model: Team })
-        .lean();
+// 11. GET TRENDING POSTS — with fallback to most-viewed when not enough tagged posts
+export async function getTrendingPosts() {
+  const LIMIT = 5;
+  try {
+    await connectToDatabase();
+    const publicFilter = getPublicStatusFilter();
 
-      return {
-        success: true,
-        data: posts.map((post: any) => ({
-          ...post,
-          _id: post._id.toString(),
-          category: post.category
-            ? { ...post.category, _id: post.category._id.toString() }
-            : null,
-          author: post.author
-            ? { ...post.author, _id: post.author._id.toString() }
-            : null,
-        })),
-      };
-    } catch (error) {
-      return { error: "Failed to fetch Trending posts." };
+    const serializePost = (post: any) => ({
+      ...post,
+      _id: post._id.toString(),
+      category: post.category
+        ? { ...post.category, _id: post.category._id.toString() }
+        : null,
+      author: post.author
+        ? { ...post.author, _id: post.author._id.toString() }
+        : null,
+    });
+
+    // 1. First, get manually-tagged Trending posts
+    const tagged = await Post.find({
+      displayTags: "Trending",
+      ...publicFilter,
+    })
+      .sort({ createdAt: -1 })
+      .limit(LIMIT)
+      .populate({ path: "category", select: "title slug", model: Category })
+      .populate({ path: "author", select: "name image", model: User })
+      .populate({ path: "teamId", select: "name", model: Team })
+      .lean();
+
+    if (tagged.length >= LIMIT) {
+      return { success: true, data: tagged.map(serializePost) };
     }
-  },
-  ["trending-posts"],
-  { revalidate: 1800, tags: ["posts"] },
-);
 
-// 12. GET LATEST POST (HERO) — cached 30 minutes
-export const getLatestPost = unstable_cache(
-  async () => {
-    try {
-      await connectToDatabase();
-      const post = await Post.findOne(getPublicStatusFilter())
-        .sort({ createdAt: -1 })
-        .populate({ path: "category", select: "title slug", model: Category })
-        .populate({ path: "author", select: "name image", model: User })
-        .populate({ path: "teamId", select: "name", model: Team })
-        .lean();
+    // 2. Fallback: fill remaining slots with most-viewed posts (exclude already fetched)
+    const taggedIds = tagged.map((p: any) => p._id);
+    const needed = LIMIT - tagged.length;
+    const fallback = await Post.find({
+      ...publicFilter,
+      _id: { $nin: taggedIds },
+    })
+      .sort({ views: -1, createdAt: -1 })
+      .limit(needed)
+      .populate({ path: "category", select: "title slug", model: Category })
+      .populate({ path: "author", select: "name image", model: User })
+      .populate({ path: "teamId", select: "name", model: Team })
+      .lean();
 
-      if (!post) return { error: "No posts found." };
+    return {
+      success: true,
+      data: [...tagged, ...fallback].map(serializePost),
+    };
+  } catch (error) {
+    return { error: "Failed to fetch Trending posts." };
+  }
+}
 
-      return {
-        success: true,
-        data: {
-          ...post,
-          _id: post._id.toString(),
-          category: post.category
-            ? { ...post.category, _id: post.category._id.toString() }
-            : null,
-          author: post.author
-            ? { ...post.author, _id: post.author._id.toString() }
-            : null,
-        },
-      };
-    } catch (error) {
-      return { error: "Failed to fetch latest post." };
-    }
-  },
-  ["latest-post"],
-  { revalidate: 1800, tags: ["posts"] },
-);
+// 12. GET LATEST POST (HERO) — always fresh so imported posts appear immediately
+export async function getLatestPost() {
+  try {
+    await connectToDatabase();
+    const post = await Post.findOne(getPublicStatusFilter())
+      .sort({ createdAt: -1 })
+      .populate({ path: "category", select: "title slug", model: Category })
+      .populate({ path: "author", select: "name image", model: User })
+      .populate({ path: "teamId", select: "name", model: Team })
+      .lean();
+
+    if (!post) return { error: "No posts found." };
+
+    return {
+      success: true,
+      data: {
+        ...post,
+        _id: post._id.toString(),
+        category: post.category
+          ? { ...post.category, _id: post.category._id.toString() }
+          : null,
+        author: post.author
+          ? { ...post.author, _id: post.author._id.toString() }
+          : null,
+      },
+    };
+  } catch (error) {
+    return { error: "Failed to fetch latest post." };
+  }
+}
 // 13. GET RANDOM POSTS (For Pagination Feature)
 export async function getRandomPosts(limit: number = 12) {
   try {

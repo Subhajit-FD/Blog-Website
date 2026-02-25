@@ -2,7 +2,6 @@ import mongoose, { Schema, models } from "mongoose";
 
 const settingsSchema = new Schema(
   {
-    // Basic Info (Managers & Admins)
     // Basic Info
     siteName: { type: String, default: "CMS 3.0" },
 
@@ -18,13 +17,15 @@ const settingsSchema = new Schema(
     },
     seoTitle: { type: String, default: "CMS 3.0" },
     seoImage: { type: String, default: "" },
+    keywords: { type: String, default: "" },
+    twitterHandle: { type: String, default: "" }, // e.g. @myblog
 
     // Dynamic Social Links
     socialLinks: [
       {
         title: { type: String, required: true },
         url: { type: String, required: true },
-        icon: { type: String, default: "" }, // SVG String
+        icon: { type: String, default: "" },
       },
     ],
 
@@ -32,17 +33,34 @@ const settingsSchema = new Schema(
     shareOptions: [
       {
         platform: { type: String, required: true },
-        baseUrl: { type: String, required: true }, // e.g., https://twitter.com/intent/tweet?url=
-        icon: { type: String, default: "" }, // SVG String
+        baseUrl: { type: String, required: true },
+        icon: { type: String, default: "" },
       },
     ],
 
+    // Animation Settings
     animations: {
       global: { type: Boolean, default: true },
       loader: { type: Boolean, default: true },
       pageTransition: { type: Boolean, default: true },
       textHighlight: { type: Boolean, default: true },
     },
+
+    // Custom SEO / Head Tags
+    customTags: [
+      {
+        label: { type: String, required: true }, // human-friendly name
+        tagType: { type: String, default: "meta" }, // "meta" | "link" | "script"
+        attributes: { type: Map, of: String, default: {} }, // key-value tag attrs
+        content: { type: String, default: "" }, // inner content for <script>
+        placement: { type: String, default: "head" }, // "head" | "body"
+      },
+    ],
+
+    // Legal & About Content (plain text / basic HTML)
+    aboutUs: { type: String, default: "" },
+    termsContent: { type: String, default: "" },
+    privacyContent: { type: String, default: "" },
   },
   { timestamps: true },
 );

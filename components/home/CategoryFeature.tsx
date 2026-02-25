@@ -92,11 +92,12 @@ export default function CategoryFeature({
                   {categoryPost.description}
                 </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {categoryPost.author && (
-                    <span className="font-medium text-foreground capitalize">
-                      By {categoryPost.author.name}
-                    </span>
-                  )}
+                  <span className="font-medium text-foreground capitalize">
+                    By{" "}
+                    {categoryPost.teamId?.name ||
+                      categoryPost.author?.name ||
+                      "Anonymous"}
+                  </span>
                   <span>•</span>
                   <span>{formatDate(categoryPost.createdAt)}</span>
                 </div>

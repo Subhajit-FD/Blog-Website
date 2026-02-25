@@ -56,7 +56,7 @@ export default function TrendingSidebar({
                 {formatDate(post.createdAt)}
               </span>
               <p className="text-xs text-muted-foreground">
-                By {post.teamId?.name || post.author?.name}
+                By {post.teamId?.name || post.author?.name || "Anonymous"}
               </p>
             </div>
           </Link>

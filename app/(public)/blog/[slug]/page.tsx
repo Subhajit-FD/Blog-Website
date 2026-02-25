@@ -38,7 +38,7 @@ export async function generateMetadata({
     title: post.title,
     description: post.description,
     keywords: post.tags, // 👈 Uses the new tags array
-    authors: [{ name: post.author.name }],
+    authors: [{ name: post.teamId?.name || post.author?.name || "Anonymous" }],
     openGraph: {
       title: post.title,
       description: post.description,
@@ -135,11 +135,13 @@ export default async function BlogPostPage({
                 alt={post.teamId?.name || post.author?.name}
               />
               <AvatarFallback className="bg-slate-200 text-slate-600 font-bold">
-                {(post.teamId?.name || post.author?.name)?.charAt(0) || "U"}
+                {(post.teamId?.name || post.author?.name)
+                  ?.charAt(0)
+                  ?.toUpperCase() || "A"}
               </AvatarFallback>
             </Avatar>
             <span className="font-medium text-foreground text-nowrap">
-              {post.teamId?.name || post.author?.name || "Unknown"}
+              {post.teamId?.name || post.author?.name || "Anonymous"}
             </span>
           </div>
 

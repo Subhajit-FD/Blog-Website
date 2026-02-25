@@ -48,13 +48,13 @@ export default function HeroPost({ post }: HeroPostProps) {
               Read Article <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          {post.author && (
-            <div className="flex items-center gap-2 text-sm md:text-base font-medium text-gray-300">
-              <span>By {post.teamId?.name || post.author.name}</span>
-              <span>•</span>
-              <span>{formatDate(post.createdAt)}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm md:text-base font-medium text-gray-300">
+            <span>
+              By {post.teamId?.name || post.author?.name || "Anonymous"}
+            </span>
+            <span>•</span>
+            <span>{formatDate(post.createdAt)}</span>
+          </div>
         </div>
       </div>
     </section>

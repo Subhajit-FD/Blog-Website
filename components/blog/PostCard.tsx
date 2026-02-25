@@ -71,18 +71,20 @@ export default function PostCard({
                 {post.author?.image && !post.teamId ? (
                   <Image
                     src={post.author.image}
-                    alt={post.author.name}
+                    alt={post.author?.name || "Anonymous"}
                     fill
                     sizes="32px"
                     className="object-cover"
                   />
                 ) : (
-                  (post.teamId?.name || post.author?.name)?.charAt(0) || "U"
+                  (post.teamId?.name || post.author?.name)
+                    ?.charAt(0)
+                    ?.toUpperCase() || "A"
                 )}
               </div>
               <div className="text-sm">
                 <p className="font-medium text-slate-900 dark:text-white">
-                  {post.teamId?.name || post.author?.name}
+                  {post.teamId?.name || post.author?.name || "Anonymous"}
                 </p>
                 <p className="text-slate-500 text-xs">
                   {formatDate(post.createdAt, {
@@ -202,7 +204,7 @@ export default function PostCard({
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
           {(post.teamId?.name || post.author?.name) && (
             <span className="font-semibold text-foreground capitalize">
-              By {post.teamId?.name || post.author?.name}
+              By {post.teamId?.name || post.author?.name || "Anonymous"}
             </span>
           )}
           <span>•</span>

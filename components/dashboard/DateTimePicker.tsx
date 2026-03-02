@@ -1,11 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { format, setYear } from "date-fns";
-import { ChevronUp, ChevronDown, ChevronLeft } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
+import {
+  format,
+  setYear,
+  setMonth,
+  getDaysInMonth,
+  startOfMonth,
+  getDay,
+} from "date-fns";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface DateTimePickerProps {
@@ -14,241 +26,209 @@ interface DateTimePickerProps {
   onClose?: () => void;
 }
 
-type ViewMode = "calendar" | "year";
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAY_HEADERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function DateTimePicker({
   value,
   onChange,
   onClose,
 }: DateTimePickerProps) {
-  const [view, setView] = React.useState<ViewMode>("calendar");
-  const [selectedDate, setSelectedDate] = React.useState<Date>(
-    value ? new Date(value) : new Date(),
-  );
+  const initial = value ? new Date(value) : new Date();
 
-  // Stepper states
-  const [hour, setHour] = React.useState(
-    value ? parseInt(format(value, "h")) : 9,
+  const [viewDate, setViewDate] = React.useState(initial);
+  const [selectedDate, setSelectedDate] = React.useState<Date>(initial);
+
+  const [hourStr, setHourStr] = React.useState(
+    value ? format(value, "hh") : "01",
   );
-  const [minute, setMinute] = React.useState(
-    value ? parseInt(format(value, "mm")) : 0,
-  );
-  const [second, setSecond] = React.useState(
-    value ? parseInt(format(value, "ss")) : 0,
+  const [minuteStr, setMinuteStr] = React.useState(
+    value ? format(value, "mm") : "00",
   );
   const [ampm, setAmpm] = React.useState<"AM" | "PM">(
     value ? (format(value, "a") as "AM" | "PM") : "AM",
   );
 
-  // For Year view
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+  const [dayStr, setDayStr] = React.useState(format(selectedDate, "dd"));
+  const [yearStr, setYearStr] = React.useState(format(selectedDate, "yyyy"));
+  const [selectedMonth, setSelectedMonth] = React.useState(
+    selectedDate.getMonth(),
+  );
 
-  const incrementHour = () => setHour((prev) => (prev === 12 ? 1 : prev + 1));
-  const decrementHour = () => setHour((prev) => (prev === 1 ? 12 : prev - 1));
-  const incrementMinute = () =>
-    setMinute((prev) => (prev >= 59 ? 0 : prev + 1));
-  const decrementMinute = () =>
-    setMinute((prev) => (prev <= 0 ? 59 : prev - 1));
-  const incrementSecond = () =>
-    setSecond((prev) => (prev >= 59 ? 0 : prev + 1));
-  const decrementSecond = () =>
-    setSecond((prev) => (prev <= 0 ? 59 : prev - 1));
+  // Sync day/year inputs when calendar date changes
+  React.useEffect(() => {
+    setDayStr(format(selectedDate, "dd"));
+    setYearStr(format(selectedDate, "yyyy"));
+    setSelectedMonth(selectedDate.getMonth());
+    setViewDate(selectedDate);
+  }, [selectedDate]);
 
   const handleConfirm = () => {
-    if (onChange) {
-      const finalDate = new Date(selectedDate);
-      let h = hour;
-      if (ampm === "PM" && h < 12) h += 12;
-      if (ampm === "AM" && h === 12) h = 0;
-
-      finalDate.setHours(h);
-      finalDate.setMinutes(minute);
-      finalDate.setSeconds(second);
-      finalDate.setMilliseconds(0);
-      onChange(finalDate);
-    }
-    if (onClose) onClose();
+    const finalDate = new Date(selectedDate);
+    let h = parseInt(hourStr) || 1;
+    const m = parseInt(minuteStr) || 0;
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    finalDate.setHours(h, m, 0, 0);
+    onChange?.(finalDate);
+    onClose?.();
   };
 
-  const handleYearSelect = (year: number) => {
-    const newDate = setYear(selectedDate, year);
+  const handleNow = () => {
+    const now = new Date();
+    setSelectedDate(now);
+    setViewDate(now);
+    setHourStr(format(now, "hh"));
+    setMinuteStr(format(now, "mm"));
+    setAmpm(format(now, "a") as "AM" | "PM");
+  };
+
+  const prevMonth = () => {
+    setViewDate((d) => {
+      const next = new Date(d);
+      next.setDate(1);
+      next.setMonth(next.getMonth() - 1);
+      return next;
+    });
+  };
+
+  const nextMonth = () => {
+    setViewDate((d) => {
+      const next = new Date(d);
+      next.setDate(1);
+      next.setMonth(next.getMonth() + 1);
+      return next;
+    });
+  };
+
+  // Build calendar grid
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const daysInMonth = getDaysInMonth(viewDate);
+  // getDay: 0=Sun, 1=Mon... We want Mon-first so offset:
+  // Mon=0, Tue=1 ... Sun=6
+  const firstDayOfWeek = (getDay(startOfMonth(viewDate)) + 6) % 7;
+  const calendarCells: (number | null)[] = [
+    ...Array(firstDayOfWeek).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  // Pad to complete last row
+  while (calendarCells.length % 7 !== 0) calendarCells.push(null);
+
+  const isSelected = (day: number) =>
+    selectedDate.getDate() === day &&
+    selectedDate.getMonth() === month &&
+    selectedDate.getFullYear() === year;
+
+  const today = new Date();
+  const isToday = (day: number) =>
+    today.getDate() === day &&
+    today.getMonth() === month &&
+    today.getFullYear() === year;
+
+  const handleDayClick = (day: number) => {
+    const d = new Date(year, month, day);
+    setSelectedDate(d);
+  };
+
+  // Sync date inputs → update selectedDate on blur
+  const commitInputs = () => {
+    const d = parseInt(dayStr) || 1;
+    const y = parseInt(yearStr) || year;
+    const m2 = selectedMonth;
+    const clamped = Math.min(d, getDaysInMonth(new Date(y, m2, 1)));
+    const newDate = new Date(y, m2, clamped);
     setSelectedDate(newDate);
-    setView("calendar");
   };
 
-  const formattedTime = `${hour}:${minute.toString().padStart(2, "0")}:${second.toString().padStart(2, "0")} ${ampm}`;
+  const handleMonthChange = (val: string) => {
+    const m2 = parseInt(val);
+    setSelectedMonth(m2);
+    const y = parseInt(yearStr) || year;
+    const clamped = Math.min(
+      parseInt(dayStr) || 1,
+      getDaysInMonth(new Date(y, m2, 1)),
+    );
+    const newDate = new Date(y, m2, clamped);
+    setSelectedDate(newDate);
+    setViewDate(newDate);
+  };
+
+  const padTime = (val: string, max: number) => {
+    const n = Math.min(parseInt(val) || 0, max);
+    return String(n).padStart(2, "0");
+  };
 
   return (
-    <div className="flex flex-col lg:flex-row bg-background rounded-3xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 w-max mx-auto lg:mx-0">
-      {/* Panel 1: Calendar or Year Select */}
-      <div className="w-full lg:w-[320px] p-4 flex flex-col border-b lg:border-b-0 lg:border-r bg-background">
-        {view === "calendar" ? (
-          <>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              onHeaderClick={() => setView("year")}
-              className="rounded-md border-0 p-0"
-              disabled={(date) =>
-                date < new Date(new Date().setHours(0, 0, 0, 0))
-              }
-            />
-            <div className="mt-4 flex gap-2">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1 rounded-xl h-10 font-semibold text-sm"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                className="flex-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl h-10 font-semibold text-sm border-none shadow-md shadow-blue-500/20"
-              >
-                OK
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col h-[328px]">
-            <div className="flex items-center justify-between mb-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setView("calendar")}
-                className="rounded-lg h-8 px-2"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
-              </Button>
-              <span className="font-bold text-base">Select Year</span>
-              <div className="w-10"></div>
-            </div>
-            <ScrollArea className="flex-1 pr-4">
-              <div className="grid grid-cols-3 gap-2">
-                {years.map((y) => (
-                  <Button
-                    key={y}
-                    variant={
-                      selectedDate.getFullYear() === y ? "default" : "ghost"
-                    }
-                    onClick={() => handleYearSelect(y)}
-                    className={cn(
-                      "rounded-xl h-9 font-medium text-sm",
-                      selectedDate.getFullYear() === y
-                        ? "bg-[#2563EB] text-white"
-                        : "",
-                    )}
-                  >
-                    {y}
-                  </Button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+    <div className="w-[280px] bg-background border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <span className="font-semibold text-base text-foreground">Publish</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleNow}
+            className="text-xs font-semibold text-primary hover:underline underline-offset-2"
+          >
+            Now
+          </button>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Panel 2: Stepper Time Selection */}
-      <div className="w-full lg:w-[320px] p-6 flex flex-col bg-muted/5 border-t lg:border-t-0">
-        <div className="text-center font-bold text-base mb-6 text-foreground/80 lowercase">
-          Time
-        </div>
-
-        <div className="flex justify-between items-start flex-1 px-1 gap-1">
-          {/* Hour Stepper */}
-          <div className="flex flex-col items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={incrementHour}
-              className="rounded-xl border shadow-sm h-9 w-9 bg-background hover:bg-accent"
-            >
-              <ChevronUp className="h-4 w-4 text-foreground/70" />
-            </Button>
-            <div className="flex flex-col items-center py-1">
-              <span className="text-3xl font-bold tracking-tight">{hour}</span>
-              <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest mt-0.5">
-                hour
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={decrementHour}
-              className="rounded-xl border shadow-sm h-9 w-9 bg-background hover:bg-accent"
-            >
-              <ChevronDown className="h-4 w-4 text-foreground/70" />
-            </Button>
-          </div>
-
-          {/* Minute Stepper */}
-          <div className="flex flex-col items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={incrementMinute}
-              className="rounded-xl border shadow-sm h-9 w-9 bg-background hover:bg-accent"
-            >
-              <ChevronUp className="h-4 w-4 text-foreground/70" />
-            </Button>
-            <div className="flex flex-col items-center py-1">
-              <span className="text-3xl font-bold tracking-tight">
-                {minute.toString().padStart(2, "0")}
-              </span>
-              <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest mt-0.5">
-                min
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={decrementMinute}
-              className="rounded-xl border shadow-sm h-9 w-9 bg-background hover:bg-accent"
-            >
-              <ChevronDown className="h-4 w-4 text-foreground/70" />
-            </Button>
-          </div>
-
-          {/* Second Stepper */}
-          <div className="flex flex-col items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={incrementSecond}
-              className="rounded-xl border shadow-sm h-9 w-9 bg-background hover:bg-accent"
-            >
-              <ChevronUp className="h-4 w-4 text-foreground/70" />
-            </Button>
-            <div className="flex flex-col items-center py-1">
-              <span className="text-3xl font-bold tracking-tight">
-                {second.toString().padStart(2, "0")}
-              </span>
-              <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest mt-0.5">
-                sec
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={decrementSecond}
-              className="rounded-xl border shadow-sm h-9 w-9 bg-background hover:bg-accent"
-            >
-              <ChevronDown className="h-4 w-4 text-foreground/70" />
-            </Button>
-          </div>
-
-          {/* AM/PM Toggle */}
-          <div className="flex flex-col items-center h-full justify-center lg:pt-0 pt-2">
-            <div className="flex flex-col bg-muted/50 rounded-xl p-1 shadow-inner border">
+      <div className="px-4 pb-4 space-y-3">
+        {/* TIME Row */}
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Time
+          </p>
+          <div className="flex items-center gap-2">
+            {/* Hour */}
+            <input
+              type="text"
+              maxLength={2}
+              value={hourStr}
+              onChange={(e) => setHourStr(e.target.value.replace(/\D/g, ""))}
+              onBlur={() => setHourStr(padTime(hourStr, 12) || "01")}
+              className="w-12 h-9 text-center font-semibold text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <span className="font-bold text-muted-foreground">:</span>
+            {/* Minute */}
+            <input
+              type="text"
+              maxLength={2}
+              value={minuteStr}
+              onChange={(e) => setMinuteStr(e.target.value.replace(/\D/g, ""))}
+              onBlur={() => setMinuteStr(padTime(minuteStr, 59))}
+              className="w-12 h-9 text-center font-semibold text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {/* AM/PM */}
+            <div className="flex border rounded-md overflow-hidden">
               <button
                 onClick={() => setAmpm("AM")}
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all",
+                  "px-2.5 py-1 text-xs font-semibold transition-colors",
                   ampm === "AM"
-                    ? "bg-background shadow-md text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted",
                 )}
               >
                 AM
@@ -256,37 +236,141 @@ export function DateTimePicker({
               <button
                 onClick={() => setAmpm("PM")}
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all",
+                  "px-2.5 py-1 text-xs font-semibold transition-colors",
                   ampm === "PM"
-                    ? "bg-background shadow-md text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-foreground text-background"
+                    : "bg-background text-muted-foreground hover:bg-muted",
                 )}
               >
                 PM
               </button>
             </div>
+            <span className="text-xs text-muted-foreground font-medium ml-auto">
+              UTC
+            </span>
           </div>
         </div>
 
-        <div className="mt-6">
-          <div className="text-center text-[13px] font-semibold text-foreground/60 mb-5 tracking-wide">
-            {formattedTime}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={handleConfirm}
-              className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl h-10 font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all border-none"
+        {/* DATE Row */}
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Date
+          </p>
+          <div className="flex items-center gap-2">
+            {/* Day */}
+            <input
+              type="text"
+              maxLength={2}
+              value={dayStr}
+              onChange={(e) => setDayStr(e.target.value.replace(/\D/g, ""))}
+              onBlur={commitInputs}
+              className="w-12 h-9 text-center font-semibold text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {/* Month */}
+            <Select
+              value={String(selectedMonth)}
+              onValueChange={handleMonthChange}
             >
-              OK
-            </Button>
+              <SelectTrigger className="h-9 flex-1 text-sm font-medium">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHS.map((m, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* Year */}
+            <input
+              type="text"
+              maxLength={4}
+              value={yearStr}
+              onChange={(e) => setYearStr(e.target.value.replace(/\D/g, ""))}
+              onBlur={commitInputs}
+              className="w-[52px] h-9 text-center font-semibold text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        {/* Calendar */}
+        <div className="space-y-2">
+          {/* Month Nav */}
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
-              onClick={onClose}
-              className="w-full text-muted-foreground hover:bg-background rounded-xl h-9 text-xs font-semibold"
+              size="icon"
+              className="h-7 w-7"
+              onClick={prevMonth}
             >
-              Cancel
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-semibold">
+              {MONTHS[month]} {year}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={nextMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 text-center">
+            {DAY_HEADERS.map((d) => (
+              <div
+                key={d}
+                className="text-[11px] font-semibold text-muted-foreground py-1"
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7 text-center gap-y-0.5">
+            {calendarCells.map((day, idx) => {
+              if (!day)
+                return <div key={`empty-${idx}`} className="h-8 w-full" />;
+              return (
+                <button
+                  key={day}
+                  onClick={() => handleDayClick(day)}
+                  className={cn(
+                    "h-8 w-8 mx-auto text-sm rounded-full flex items-center justify-center transition-colors relative",
+                    isSelected(day)
+                      ? "bg-primary text-primary-foreground font-bold"
+                      : "hover:bg-muted text-foreground",
+                    !isSelected(day) && isToday(day) && "font-semibold",
+                  )}
+                >
+                  {day}
+                  {isToday(day) && !isSelected(day) && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <Button
+            variant="outline"
+            className="flex-1"
+            size="sm"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button className="flex-1" size="sm" onClick={handleConfirm}>
+            OK
+          </Button>
         </div>
       </div>
     </div>

@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import {
   updateUserRole,
   assignRoleToUser,
-  assignTeamToUser,
+  toggleTeamForUser,
+  clearAllTeamsFromUser,
 } from "@/actions/user.actions";
 import { PERMISSIONS, ROLES } from "@/lib/config/permissions";
 import { toast } from "sonner";
@@ -22,12 +23,12 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import { Shield, MoreHorizontal, Check, Users } from "lucide-react";
+import { Shield, MoreHorizontal, Check, Users, X } from "lucide-react";
 
 interface Role {
   _id: string;
   name: string;
-  slug: string; // Added slug
+  slug: string;
   permissions: number;
 }
 
@@ -49,43 +50,53 @@ export default function UserRoleRow({
 }) {
   const [isPending, startTransition] = useTransition();
 
-  // Legacy Bitwise Update
   const handlePermissionChange = (newBit: number) => {
     startTransition(async () => {
-      // For legacy presets, we might want to clear the custom roleId
-      // But updateUserRole handles the bitwise update.
-      // If we are setting a 'preset' (like ADMIN), we should ideally find the Admin role and assign it.
-      // For now, we'll keep the direct bitwise update for "Force Admin" and resets.
       const res = await updateUserRole(user._id, newBit);
       if (res.error) toast.error(res.error);
       else toast.success("Permissions updated!");
     });
   };
 
-  // Dynamic Role Assignment
   const handleAssignRole = (roleId: string) => {
     startTransition(async () => {
       const res = await assignRoleToUser(user._id, roleId);
       if (res.error) toast.error(res.error);
-      else {
-        toast.success("Role assigned!");
-      }
+      else toast.success("Role assigned!");
     });
   };
 
-  // Dynamic Team Assignment
-  const handleAssignTeam = (teamId: string | null) => {
+  const handleToggleTeam = (teamId: string, teamName: string) => {
     startTransition(async () => {
-      const res = await assignTeamToUser(user._id, teamId);
+      const res = await toggleTeamForUser(user._id, teamId);
       if (res.error) toast.error(res.error);
-      else {
-        toast.success(teamId ? "Team assigned!" : "Team unassigned!");
-      }
+      else
+        toast.success(
+          res.removed ? `Removed from ${teamName}` : `Added to ${teamName}`,
+        );
     });
   };
 
-  // Helper to check if user has a specific bit for labeling
+  const handleClearTeams = () => {
+    startTransition(async () => {
+      const res = await clearAllTeamsFromUser(user._id);
+      if (res.error) toast.error(res.error);
+      else toast.success("All teams cleared.");
+    });
+  };
+
   const isBitSet = (bit: number) => (user.permissions & bit) === bit;
+
+  // Determine if a team is currently assigned
+  const userTeamIds: string[] = (user.teamIds || []).map((t: any) =>
+    typeof t === "string" ? t : t._id?.toString?.() || "",
+  );
+  const hasTeam = (teamId: string) => userTeamIds.includes(teamId);
+
+  // Get populated team objects for display
+  const assignedTeams: { _id: string; name: string }[] = (
+    user.teamIds || []
+  ).filter((t: any) => t && typeof t === "object" && t.name);
 
   // Determine Display Role
   let displayRoleName = "Custom";
@@ -94,14 +105,10 @@ export default function UserRoleRow({
 
   if (user.roleId) {
     displayRoleName = user.roleId.name;
-    // Style based on some heuristics or specific slugs
     if (user.roleId.slug === "admin") roleBadgeVariant = "destructive";
     else if (user.roleId.slug === "manager") roleBadgeVariant = "default";
-    else if (user.roleId.slug === "editor") roleBadgeVariant = "secondary";
     else roleBadgeVariant = "secondary";
   } else {
-    // Fallback: Try to match permissions to known roles if NO roleId is set
-    // This handles users who were assigned bits before the role system was fully used
     if (user.permissions === ROLES.ADMIN) {
       displayRoleName = "Admin (Legacy)";
       roleBadgeVariant = "destructive";
@@ -109,7 +116,6 @@ export default function UserRoleRow({
       displayRoleName = "User";
       roleBadgeVariant = "outline";
     } else {
-      // Check if permissions match any predefined role exactly
       const matchedRole = roles.find((r) => r.permissions === user.permissions);
       if (matchedRole) {
         displayRoleName = `${matchedRole.name} (Unlinked)`;
@@ -128,13 +134,26 @@ export default function UserRoleRow({
       </TableCell>
       <TableCell>
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant={roleBadgeVariant}>{displayRoleName}</Badge>
-            {user.teamId && (
-              <Badge variant="outline" className="border-primary text-primary">
-                {user.teamId.name}
+            {/* Multi-team badges */}
+            {assignedTeams.map((team) => (
+              <Badge
+                key={team._id}
+                variant="outline"
+                className="border-primary text-primary flex items-center gap-1 pr-1"
+              >
+                {team.name}
+                <button
+                  disabled={isPending}
+                  onClick={() => handleToggleTeam(team._id, team.name)}
+                  className="hover:text-destructive transition-colors ml-0.5"
+                  title={`Remove from ${team.name}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </Badge>
-            )}
+            ))}
           </div>
           <div className="flex gap-1 flex-wrap mt-1">
             {isBitSet(PERMISSIONS.ADMINISTRATOR) && (
@@ -147,14 +166,11 @@ export default function UserRoleRow({
                 DASHBOARD
               </Badge>
             )}
-            {/* Only show "Custom" bits if it's not a standard simple role */}
-            {user.permissions !== ROLES.USER &&
-              // Only show custom indicator if no role is assigned but bits are present
-              !user.roleId && (
-                <Badge variant="outline" className="text-[10px] h-5 bg-muted">
-                  Custom
-                </Badge>
-              )}
+            {user.permissions !== ROLES.USER && !user.roleId && (
+              <Badge variant="outline" className="text-[10px] h-5 bg-muted">
+                Custom
+              </Badge>
+            )}
           </div>
         </div>
       </TableCell>
@@ -194,35 +210,46 @@ export default function UserRoleRow({
 
             <DropdownMenuSeparator />
 
-            {/* DYNAMIC TEAMS SUBMENU */}
+            {/* MULTI-TEAM SUBMENU */}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <Users className="w-4 h-4 mr-2" /> Assign Team
+                <Users className="w-4 h-4 mr-2" /> Assign Teams
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => handleAssignTeam(null)}>
-                  <span>None</span>
-                  {!user.teamId && <Check className="w-4 h-4 ml-auto" />}
-                </DropdownMenuItem>
-                {teams.map((team) => (
-                  <DropdownMenuItem
-                    key={team._id}
-                    onClick={() => handleAssignTeam(team._id)}
-                  >
-                    <span>{team.name}</span>
-                    {user.teamId?._id === team._id && (
-                      <Check className="w-4 h-4 ml-auto" />
+                {teams.length > 0 ? (
+                  <>
+                    {teams.map((team) => (
+                      <DropdownMenuItem
+                        key={team._id}
+                        onClick={() => handleToggleTeam(team._id, team.name)}
+                      >
+                        <span>{team.name}</span>
+                        {hasTeam(team._id) && (
+                          <Check className="w-4 h-4 ml-auto text-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    {assignedTeams.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={handleClearTeams}
+                          className="text-muted-foreground text-xs"
+                        >
+                          Clear all teams
+                        </DropdownMenuItem>
+                      </>
                     )}
-                  </DropdownMenuItem>
-                ))}
+                  </>
+                ) : (
+                  <DropdownMenuItem disabled>No teams created</DropdownMenuItem>
+                )}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              onClick={() => handlePermissionChange(0)} // Reset to 0 (ROLES.USER)
-            >
+            <DropdownMenuItem onClick={() => handlePermissionChange(0)}>
               Reset to User
             </DropdownMenuItem>
 

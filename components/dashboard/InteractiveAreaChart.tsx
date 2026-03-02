@@ -181,7 +181,12 @@ export default function InteractiveAreaChart() {
       {/* Chart Segment */}
       {!isLoading && !error && (
         <div className="p-4 md:p-6 pt-0 mt-6 h-[300px] md:h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            minHeight={0}
+          >
             <AreaChart
               data={filteredData}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

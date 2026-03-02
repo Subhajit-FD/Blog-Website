@@ -11,6 +11,7 @@ export async function submitContactForm(data: {
   name: string;
   email: string;
   subject: string;
+  category?: string;
   message: string;
 }) {
   try {
@@ -19,9 +20,13 @@ export async function submitContactForm(data: {
     }
 
     await connectToDatabase();
-    await Contact.create(data);
-
-    // Optional: You could also trigger Resend here to email YOURSELF a notification!
+    await Contact.create({
+      name: data.name,
+      email: data.email,
+      subject: data.subject,
+      category: data.category || "General Inquiry",
+      message: data.message,
+    });
 
     return {
       success: true,

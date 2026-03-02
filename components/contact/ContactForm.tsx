@@ -16,8 +16,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { contactSchema, ContactInput } from "@/lib/validations/contact";
 import { submitContactForm } from "@/actions/contact.actions";
+import { CONTACT_CATEGORIES } from "@/lib/constants/contact";
 
 export default function ContactForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +35,7 @@ export default function ContactForm() {
     defaultValues: {
       name: "",
       email: "",
+      category: "General Inquiry",
       message: "",
     },
   });
@@ -37,7 +46,8 @@ export default function ContactForm() {
       const res = await submitContactForm({
         name: data.name,
         email: data.email,
-        subject: "General Inquiry", // Default subject since field was removed
+        category: data.category,
+        subject: data.category, // subject mirrors category for backward compat
         message: data.message,
       });
 
@@ -47,7 +57,7 @@ export default function ContactForm() {
         toast.success(res.message || "Message sent successfully!");
         form.reset();
       }
-    } catch (error) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -67,6 +77,7 @@ export default function ContactForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Name + Email row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <FormField
               control={form.control}
@@ -109,6 +120,38 @@ export default function ContactForm() {
             />
           </div>
 
+          {/* Category */}
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-medium">
+                  What is this about?
+                </FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-muted/30 border-none h-12 rounded-sm focus:ring-1">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {CONTACT_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Message */}
           <FormField
             control={form.control}
             name="message"
@@ -117,7 +160,7 @@ export default function ContactForm() {
                 <FormLabel className="text-base font-medium">Message</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Let tell us know your thoughts"
+                    placeholder="Let us know your thoughts..."
                     className="bg-muted/30 border-none min-h-[150px] resize-none rounded-sm focus-visible:ring-1"
                     {...field}
                   />

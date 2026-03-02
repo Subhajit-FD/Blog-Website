@@ -523,3 +523,36 @@ export async function getRandomPosts(limit: number = 12) {
     return { error: "Failed to fetch random posts." };
   }
 }
+
+// 14. GET POSTS BY TAG — for the /tag/[slug] public page
+export async function getPostsByTag(tag: string) {
+  try {
+    await connectToDatabase();
+
+    const posts = await Post.find({
+      tags: { $regex: new RegExp(`^${tag}$`, "i") }, // case-insensitive exact match
+      ...getPublicStatusFilter(),
+    })
+      .populate({ path: "category", select: "title slug", model: Category })
+      .populate({ path: "author", select: "name image", model: User })
+      .populate({ path: "teamId", select: "name", model: Team })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return {
+      success: true,
+      data: posts.map((post: any) => ({
+        ...post,
+        _id: post._id.toString(),
+        category: post.category
+          ? { ...post.category, _id: post.category._id.toString() }
+          : null,
+        author: post.author
+          ? { ...post.author, _id: post.author._id.toString() }
+          : null,
+      })),
+    };
+  } catch (error) {
+    return { error: "Failed to fetch posts by tag." };
+  }
+}

@@ -4,6 +4,7 @@ import { authConfig } from "./auth.config";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // 1. Initialize Auth.js
 const { auth } = NextAuth(authConfig);
@@ -14,33 +15,44 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// 3. Configure the Rate Limiter (Sliding Window Algorithm)
-// Raised to 60 req / 10s to avoid false-positives on legit dashboard navigation.
+// 3. Rate Limiter — generous limit per sliding window
 const ratelimit = new Ratelimit({
-  redis: redis,
+  redis,
   limiter: Ratelimit.slidingWindow(60, "10 s"),
-  // Only enable analytics in production — localhost Upstash connections are unreliable
   analytics: process.env.NODE_ENV === "production",
 });
 
+// Routes that warrant rate limiting (write/auth actions only)
+function isRateLimitedRoute(req: NextRequest): boolean {
+  const { pathname, method } = req.nextUrl as any;
+  const httpMethod = method || (req as any).method || "GET";
+
+  // Always rate-limit API routes and auth pages (any method)
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register")
+  ) {
+    return true;
+  }
+
+  // For dashboard & public pages: only rate-limit non-GET requests
+  // (form submissions, mutations) — never block simple page navigation
+  if (httpMethod !== "GET" && httpMethod !== "HEAD") {
+    return true;
+  }
+
+  return false;
+}
+
 // 4. Wrap the Auth middleware with Rate Limiting
 export default auth(async (req) => {
-  const { pathname } = req.nextUrl;
-
-  // Optimize: Only rate limit sensitive routes (API, Auth, Dashboard writes)
-  // Public informational pages should be as fast as possible.
-  const isSensitiveRoute =
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/dashboard");
-
-  if (!isSensitiveRoute) {
+  // Skip rate limiting in development — avoids false positives on localhost
+  if (process.env.NODE_ENV !== "production") {
     return NextResponse.next();
   }
 
-  // Skip rate limiting entirely in development — avoids false positives on localhost
-  if (process.env.NODE_ENV !== "production") {
+  if (!isRateLimitedRoute(req)) {
     return NextResponse.next();
   }
 
@@ -48,14 +60,14 @@ export default auth(async (req) => {
   const ip =
     (req as any).ip || req.headers.get("x-forwarded-for") || "127.0.0.1";
 
-  // Check the IP against our Redis store
   const { success, limit, reset, remaining } = await ratelimit.limit(
     `ratelimit_${ip}`,
   );
 
-  // If they exceed the limit, block the request instantly at the Edge
   if (!success) {
-    console.warn(`🛑 Rate limit exceeded for IP: ${ip} on ${pathname}`);
+    console.warn(
+      `🛑 Rate limit exceeded for IP: ${ip} on ${req.nextUrl.pathname}`,
+    );
 
     return new NextResponse(
       JSON.stringify({
@@ -73,8 +85,6 @@ export default auth(async (req) => {
       },
     );
   }
-
-  // If they pass, Auth.js takes over and evaluates the route permissions normally
 });
 
 // 5. Next.js Matcher Configuration

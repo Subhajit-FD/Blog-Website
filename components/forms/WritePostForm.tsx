@@ -184,7 +184,10 @@ export default function WritePostForm({
         toast.error(response.error);
       } else if (response.success) {
         toast.success(response.message);
-        router.push("/dashboard/posts");
+        // Stay on edit page after update — user navigates back manually
+        if (!initialData) {
+          router.push("/dashboard/posts");
+        }
       }
     });
   };

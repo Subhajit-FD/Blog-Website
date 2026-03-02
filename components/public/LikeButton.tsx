@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
 import { toggleLike } from "@/actions/engagement.actions";
+import { useThrottle } from "@/lib/helpers/performance";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
@@ -27,7 +28,7 @@ export default function LikeButton({
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likesCount, setLikesCount] = useState(initialLikes);
 
-  const handleToggle = () => {
+  const handleToggleFn = useCallback(() => {
     if (!userId) {
       toast.error("Please log in to like this post.");
       return;
@@ -48,7 +49,10 @@ export default function LikeButton({
         toast.error(res.error);
       }
     });
-  };
+  }, [userId, isLiked, likesCount, postId, pathname]);
+
+  // Throttle: only allows one like/unlike per 2 seconds — prevents DB spam
+  const handleToggle = useThrottle(handleToggleFn, 2000);
 
   return (
     <Button

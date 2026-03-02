@@ -12,10 +12,13 @@ const userSchema = new Schema(
     // Dynamic Role Reference
     roleId: { type: Schema.Types.ObjectId, ref: "Role" },
 
-    // Dynamic Team Reference
+    // Multi-Team References (array)
+    teamIds: [{ type: Schema.Types.ObjectId, ref: "Team" }],
+
+    // Legacy single-team field (keep for backward compat during migration)
     teamId: { type: Schema.Types.ObjectId, ref: "Team" },
 
-    // The new Bitwise Field (acts as cache/override)
+    // The Bitwise Permissions Field
     permissions: {
       type: Number,
       default: ROLES.USER,

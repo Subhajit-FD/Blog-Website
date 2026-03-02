@@ -9,6 +9,7 @@ import { PERMISSIONS } from "@/lib/config/permissions";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { verifyOTP } from "./otp.actions";
+import mongoose from "mongoose";
 import {
   profileSchema,
   ProfileInput,
@@ -65,7 +66,8 @@ export async function assignRoleToUser(userId: string, roleId: string) {
   }
 }
 
-export async function assignTeamToUser(userId: string, teamId: string | null) {
+// Toggle a single team on/off for a user (multi-team support)
+export async function toggleTeamForUser(userId: string, teamId: string) {
   const session = await auth();
   const permissions = session?.user?.permissions ?? 0;
   const canManage =
@@ -77,19 +79,51 @@ export async function assignTeamToUser(userId: string, teamId: string | null) {
   try {
     await connectToDatabase();
 
-    if (teamId) {
-      const team = await Team.findById(teamId);
-      if (!team) return { error: "Team not found." };
+    const team = await Team.findById(teamId);
+    if (!team) return { error: "Team not found." };
+
+    const user = await User.findById(userId);
+    if (!user) return { error: "User not found." };
+
+    const teamObjectId = new mongoose.Types.ObjectId(teamId);
+    const hasTeam = user.teamIds?.some((id: any) =>
+      id.equals ? id.equals(teamObjectId) : id.toString() === teamId,
+    );
+
+    if (hasTeam) {
+      await User.findByIdAndUpdate(userId, {
+        $pull: { teamIds: teamObjectId },
+      });
+    } else {
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { teamIds: teamObjectId },
+      });
     }
 
-    await User.findByIdAndUpdate(userId, {
-      teamId: teamId || null,
-    });
+    revalidatePath("/dashboard/users");
+    return { success: true, removed: hasTeam };
+  } catch (error) {
+    return { error: "Failed to toggle team." };
+  }
+}
 
+// Remove all teams from a user
+export async function clearAllTeamsFromUser(userId: string) {
+  const session = await auth();
+  const permissions = session?.user?.permissions ?? 0;
+  const canManage =
+    (permissions & PERMISSIONS.UPDATE_USER) !== 0 ||
+    (permissions & PERMISSIONS.ADMINISTRATOR) !== 0;
+
+  if (!canManage) return { error: "Permission denied." };
+
+  try {
+    await connectToDatabase();
+    await User.findByIdAndUpdate(userId, { teamIds: [] });
     revalidatePath("/dashboard/users");
     return { success: true };
   } catch (error) {
-    return { error: "Failed to assign team." };
+    return { error: "Failed to clear teams." };
   }
 }
 

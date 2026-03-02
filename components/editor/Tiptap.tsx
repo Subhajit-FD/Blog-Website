@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import ImageExtension from "@tiptap/extension-image";
 import LinkExtension from "@tiptap/extension-link";
@@ -24,12 +25,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import Underline from "@tiptap/extension-underline"; // 👈 Import Underline extension
+import Underline from "@tiptap/extension-underline";
 
 import {
   Bold,
   Italic,
-  Underline as UnderlineIcon, // 👈 Import Icon
+  Underline as UnderlineIcon,
   Heading1,
   Heading2,
   Heading3,
@@ -43,7 +44,7 @@ import {
   ImageIcon,
   Link as LinkIcon,
   X,
-  Minus, // 👈 Import Separator Icon
+  Minus,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -52,7 +53,6 @@ interface TiptapProps {
   onChange: (richText: string) => void;
 }
 
-// 👈 Helper Component for Tooltip Buttons
 function ToolbarButton({
   onClick,
   isActive,
@@ -85,6 +85,35 @@ function ToolbarButton({
   );
 }
 
+// Compact inline button for the bubble menu (no tooltip needed — space is limited)
+function BubbleButton({
+  onClick,
+  isActive,
+  icon: Icon,
+  label,
+}: {
+  onClick: () => void;
+  isActive?: boolean;
+  icon: React.ElementType;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`flex items-center justify-center w-7 h-7 rounded transition-colors text-sm
+        ${
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-foreground hover:bg-muted"
+        }`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+    </button>
+  );
+}
+
 export default function Tiptap({ content, onChange }: TiptapProps) {
   const [linkUrl, setLinkUrl] = useState<string>("");
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
@@ -93,7 +122,7 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
     immediatelyRender: false,
     extensions: [
       StarterKit,
-      Underline, // 👈 Add Underline Extension
+      Underline,
       ImageExtension.configure({
         inline: true,
         HTMLAttributes: {
@@ -115,15 +144,13 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
       },
     },
     onUpdate({ editor }) {
-      onChange(editor.getHTML()); // Sends the HTML string back to React Hook Form
+      onChange(editor.getHTML());
     },
   });
 
   if (!editor) return null;
 
-  // CUSTOM IMAGE UPLOAD HANDLER FOR TIPTAP
   const addTiptapImage = async () => {
-    // 1. Create a hidden file input element on the fly
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
@@ -133,11 +160,8 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
       if (!file) return;
 
       const loadingId = toast.loading("Uploading image into post...");
-
-      // 2. Upload to the "blog" folder in ImageKit
       const result = await compressAndUploadImage(file, "blog");
 
-      // 3. Insert the ImageKit URL into the editor
       if (result.success && result.url) {
         editor.chain().focus().setImage({ src: result.url }).run();
         toast.success("Image embedded!", { id: loadingId });
@@ -175,7 +199,118 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
 
   return (
     <div className="flex flex-col border rounded-md overflow-hidden bg-card shadow-sm">
-      {/* TOOLBAR */}
+      {/* INLINE BUBBLE MENU — appears when text is selected */}
+      <BubbleMenu
+        editor={editor}
+        options={{ placement: "top" }}
+        className="flex flex-wrap items-center gap-0.5 bg-popover border shadow-lg rounded-lg p-1.5 z-50 max-w-sm"
+      >
+        {/* Row 1: Text styles */}
+        <BubbleButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          isActive={editor.isActive("bold")}
+          icon={Bold}
+          label="Bold"
+        />
+        <BubbleButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          isActive={editor.isActive("italic")}
+          icon={Italic}
+          label="Italic"
+        />
+        <BubbleButton
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          isActive={editor.isActive("underline")}
+          icon={UnderlineIcon}
+          label="Underline"
+        />
+
+        <div className="w-px h-5 bg-border mx-0.5" />
+
+        {/* Headings */}
+        <BubbleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 1 })}
+          icon={Heading1}
+          label="Heading 1"
+        />
+        <BubbleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 2 })}
+          icon={Heading2}
+          label="Heading 2"
+        />
+        <BubbleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 3 })}
+          icon={Heading3}
+          label="Heading 3"
+        />
+        <BubbleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 4 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 4 })}
+          icon={Heading4}
+          label="Heading 4"
+        />
+        <BubbleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 5 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 5 })}
+          icon={Heading5}
+          label="Heading 5"
+        />
+        <BubbleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 6 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 6 })}
+          icon={Heading6}
+          label="Heading 6"
+        />
+
+        <div className="w-px h-5 bg-border mx-0.5" />
+
+        {/* Lists & blocks */}
+        <BubbleButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive("bulletList")}
+          icon={List}
+          label="Bullet List"
+        />
+        <BubbleButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive("orderedList")}
+          icon={ListOrdered}
+          label="Ordered List"
+        />
+        <BubbleButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive("blockquote")}
+          icon={Quote}
+          label="Blockquote"
+        />
+
+        <div className="w-px h-5 bg-border mx-0.5" />
+
+        {/* Link */}
+        <BubbleButton
+          onClick={openLinkDialog}
+          isActive={editor.isActive("link")}
+          icon={LinkIcon}
+          label="Insert Link"
+        />
+      </BubbleMenu>
+
+      {/* MAIN TOOLBAR */}
       <div className="flex flex-wrap items-center gap-1 bg-muted/50 border-b p-2">
         <ToolbarButton
           onClick={() => editor.chain().focus().setParagraph().run()}
@@ -210,11 +345,6 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
           icon={Heading3}
           label="Heading 3"
         />
-        {/* Skipping H4-H6 for brevity unless explicitly requested, 
-            but usually H1-H3 are enough. 
-            User didn't ask to remove them, so I should probably keep them or 
-            group them. I'll stick to original H1-H6 but wrapped.
-        */}
         <ToolbarButton
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 4 }).run()
@@ -254,7 +384,6 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
           icon={Italic}
           label="Italic"
         />
-        {/* 👈 New Underline Button */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           isActive={editor.isActive("underline")}
@@ -271,10 +400,9 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
 
         <div className="w-px h-6 bg-border mx-1" />
 
-        {/* 👈 New Separator Button */}
         <ToolbarButton
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          isActive={false} // HR doesn't have an active state usually
+          isActive={false}
           icon={Minus}
           label="Separator"
         />

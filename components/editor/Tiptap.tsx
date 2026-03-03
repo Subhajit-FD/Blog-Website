@@ -198,7 +198,7 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
   };
 
   return (
-    <div className="flex flex-col border rounded-md overflow-hidden bg-card shadow-sm">
+    <div className="flex flex-col border rounded-md bg-card shadow-sm">
       {/* INLINE BUBBLE MENU — appears when text is selected */}
       <BubbleMenu
         editor={editor}
@@ -311,7 +311,7 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
       </BubbleMenu>
 
       {/* MAIN TOOLBAR */}
-      <div className="flex flex-wrap items-center gap-1 bg-muted/50 border-b p-2">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 bg-muted border-b p-2">
         <ToolbarButton
           onClick={() => editor.chain().focus().setParagraph().run()}
           isActive={editor.isActive("paragraph")}

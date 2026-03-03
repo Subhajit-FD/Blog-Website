@@ -180,7 +180,7 @@ export default function InteractiveAreaChart() {
 
       {/* Chart Segment */}
       {!isLoading && !error && (
-        <div className="p-4 md:p-6 pt-0 mt-2 w-full">
+        <div className="p-4 md:p-6 pt-0 mt-2 w-full min-w-0">
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart
               data={filteredData}

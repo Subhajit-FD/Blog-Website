@@ -46,7 +46,8 @@ import {
   X,
   Minus,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { ClipboardPaste } from "lucide-react";
 
 interface TiptapProps {
   content: string;
@@ -117,6 +118,21 @@ function BubbleButton({
 export default function Tiptap({ content, onChange }: TiptapProps) {
   const [linkUrl, setLinkUrl] = useState<string>("");
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const [pastePrompt, setPastePrompt] = useState<{
+    html: string;
+    plain: string;
+    top: number;
+    left: number;
+  } | null>(null);
+
+  // Close paste prompt on click outside
+  useEffect(() => {
+    const handleClickOutside = () => setPastePrompt(null);
+    if (pastePrompt) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [pastePrompt]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -141,6 +157,30 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
       attributes: {
         class:
           "prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl dark:prose-invert m-5 focus:outline-none min-h-[400px]",
+      },
+      handlePaste(view, event) {
+        // Only target text pastes, let image pastes pass through unharmed
+        if (event.clipboardData?.files?.length) return false;
+
+        const html = event.clipboardData?.getData("text/html");
+        const plain = event.clipboardData?.getData("text/plain");
+
+        // If it's just plain text, let Tiptap handle it normally
+        if (!html || !plain) return false;
+
+        event.preventDefault();
+
+        // Get window-relative coordinates of the cursor
+        const coords = view.coordsAtPos(view.state.selection.from);
+
+        setPastePrompt({
+          html,
+          plain,
+          top: coords.bottom + 10,
+          left: coords.left,
+        });
+
+        return true; // We handled the paste entirely
       },
     },
     onUpdate({ editor }) {
@@ -509,8 +549,72 @@ export default function Tiptap({ content, onChange }: TiptapProps) {
       </div>
 
       {/* THE ACTUAL EDITOR AREA */}
-      <div className="p-4 cursor-text" onClick={() => editor.commands.focus()}>
+      <div
+        className="p-4 cursor-text relative"
+        onClick={() => editor.commands.focus()}
+      >
         <EditorContent editor={editor} />
+
+        {/* PASTE OPTIONS FLOATING MENU */}
+        {pastePrompt && (
+          <div
+            className="fixed z-100 bg-popover border border-border shadow-xl rounded-md flex flex-col p-1 animate-in fade-in zoom-in-95 duration-100 min-w-[200px]"
+            style={{ top: pastePrompt.top, left: pastePrompt.left }}
+            onMouseDown={(e) => e.stopPropagation()} // Prevent closing when clicking menu
+          >
+            <div className="flex items-center gap-2 px-2 pt-2 pb-1.5 border-b mb-1">
+              <ClipboardPaste className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Paste Options
+              </span>
+            </div>
+
+            <button
+              className="text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium rounded transition-colors flex flex-col"
+              onClick={() => {
+                editor.commands.insertContent(pastePrompt.html);
+                setPastePrompt(null);
+                editor.commands.focus();
+              }}
+            >
+              <span>Keep Source Formatting</span>
+              <span className="text-xs text-muted-foreground font-normal">
+                Retains original styles
+              </span>
+            </button>
+
+            <button
+              className="text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium rounded transition-colors flex flex-col"
+              onClick={() => {
+                // Tiptap's insertContent normalizes HTML, which effectively acts as merge formatting inside structured blocks
+                editor.commands.insertContent(pastePrompt.html, {
+                  parseOptions: { preserveWhitespace: false },
+                });
+                setPastePrompt(null);
+                editor.commands.focus();
+              }}
+            >
+              <span>Merge Formatting</span>
+              <span className="text-xs text-muted-foreground font-normal">
+                Adapts to current style
+              </span>
+            </button>
+
+            <button
+              className="text-left px-3 py-2 text-sm hover:bg-muted text-foreground font-medium rounded transition-colors flex flex-col"
+              onClick={() => {
+                editor.commands.insertContent(pastePrompt.plain);
+                setPastePrompt(null);
+                editor.commands.focus();
+              }}
+            >
+              <span>Keep Text Only</span>
+              <span className="text-xs text-muted-foreground font-normal">
+                Strips all formatting
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

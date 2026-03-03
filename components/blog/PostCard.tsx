@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FileText, MessageCircle } from "lucide-react";
@@ -25,6 +28,8 @@ export default function PostCard({
   isBookmarked = false,
   userId,
 }: PostCardProps) {
+  const [imgError, setImgError] = useState(false);
+
   if (!post) return null;
 
   /* ------------------------------------------------------------------ */
@@ -39,15 +44,16 @@ export default function PostCard({
           className="relative h-48 w-full overflow-hidden bg-slate-100 block"
           aria-label={post.title}
         >
-          {post.coverImage && (
+          {post.coverImage && !imgError ? (
             <Image
               src={post.coverImage}
               alt={post.coverImageAlt || post.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={() => setImgError(true)}
             />
-          )}
+          ) : null}
           {post.category && (
             <Badge className="absolute top-4 left-4 z-10 bg-white/90 text-slate-900 hover:bg-white">
               {post.category.title}
@@ -117,13 +123,14 @@ export default function PostCard({
         aria-label={post.title}
       >
         <div className="relative aspect-4/3 overflow-hidden bg-muted">
-          {post.coverImage ? (
+          {post.coverImage && !imgError ? (
             <Image
               src={post.coverImage}
               alt={post.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary text-muted-foreground">
@@ -173,13 +180,14 @@ export default function PostCard({
 
       {/* Image Column */}
       <div className="md:col-span-4 relative aspect-4/3 w-full overflow-hidden bg-muted">
-        {post.coverImage ? (
+        {post.coverImage && !imgError ? (
           <Image
             src={post.coverImage}
             alt={post.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-secondary text-muted-foreground">

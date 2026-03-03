@@ -43,8 +43,8 @@ export default function NavDropdown({
         {/* Top Section: Categories & Arrows */}
         <div className="top-navigation-dropdown flex items-center justify-between px-4 py-2 border-b border-border pb-4 mb-4">
           <div className="category-lists">
-            <ul className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
-              <li>
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium text-muted-foreground">
+              <li className="whitespace-nowrap">
                 <Link
                   href="/category/all"
                   className="text-foreground hover:text-primary transition-colors"
@@ -52,8 +52,8 @@ export default function NavDropdown({
                   All
                 </Link>
               </li>
-              {categories.slice(0, 5).map((category) => (
-                <li key={category._id}>
+              {categories.map((category) => (
+                <li key={category._id} className="whitespace-nowrap">
                   <Link
                     href={`/category/${category.slug}`}
                     className="hover:text-foreground transition-colors capitalize"
@@ -100,7 +100,8 @@ export default function NavDropdown({
                           <Image
                             src={post.coverImage}
                             alt={post.title}
-                            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (

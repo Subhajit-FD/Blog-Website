@@ -21,6 +21,11 @@ export default function InteractiveAreaChart() {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -102,7 +107,7 @@ export default function InteractiveAreaChart() {
   };
 
   return (
-    <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col mb-8">
+    <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col mb-8 min-w-0 w-full">
       {/* Header Segment */}
       <div className="flex flex-col md:flex-row md:items-start justify-between border-b p-4 md:p-6 gap-4 md:gap-6">
         <div className="space-y-1">
@@ -179,7 +184,7 @@ export default function InteractiveAreaChart() {
       )}
 
       {/* Chart Segment */}
-      {!isLoading && !error && (
+      {!isLoading && !error && isMounted && (
         <div className="p-4 md:p-6 pt-0 mt-2 w-full min-w-0">
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart
